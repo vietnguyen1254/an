@@ -1,0 +1,523 @@
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+import '../models/mood.dart';
+
+/// Mây — the cloud companion. Ported 1:1 from the CSS construction in
+/// `May copy.dc.html`: a cloud silhouette built from three overlapping
+/// circular "lobes" plus a rounded base, plain shapes/gradients only (no
+/// illustration asset exists yet — see the design chat transcript).
+
+class _MoodSpec {
+  final Color fill;
+  final Color shade;
+  final Color glow;
+  final Color ink;
+  final String eyes; // arc | dot | sad | heavy
+  final String mouth; // grin | smile | line | o | frown | flat
+  final bool cheeks;
+  final bool brows;
+  final bool sparkly;
+  final bool sway;
+  final int drops;
+
+  const _MoodSpec({
+    required this.fill,
+    required this.shade,
+    required this.glow,
+    required this.ink,
+    required this.eyes,
+    required this.mouth,
+    this.cheeks = false,
+    this.brows = false,
+    this.sparkly = false,
+    this.sway = false,
+    this.drops = 0,
+  });
+}
+
+final Map<Mood, _MoodSpec> _moods = {
+  Mood.binhYen: const _MoodSpec(
+    fill: Color(0xFFFCFDFF), shade: Color(0x52B0C4D6), glow: Color(0x9EFFFFFF),
+    ink: Color(0xFF5C6E80), eyes: 'arc', mouth: 'smile',
+  ),
+  Mood.vui: const _MoodSpec(
+    fill: Color(0xFFFFFDF6), shade: Color(0x4DEECB96), glow: Color(0x99FAE2B4),
+    ink: Color(0xFF6B5B3E), eyes: 'arc', mouth: 'grin', cheeks: true, sparkly: true, sway: true,
+  ),
+  Mood.binhThuong: const _MoodSpec(
+    fill: Color(0xFFFBFCFD), shade: Color(0x42B0C4D6), glow: Color(0x99FFFFFF),
+    ink: Color(0xFF6A7885), eyes: 'dot', mouth: 'line',
+  ),
+  Mood.loLang: const _MoodSpec(
+    fill: Color(0xFFF4F2F9), shade: Color(0x579284B4), glow: Color(0x70AAA0C4),
+    ink: Color(0xFF5D5375), eyes: 'dot', mouth: 'o', brows: true, sway: true,
+  ),
+  Mood.buon: const _MoodSpec(
+    fill: Color(0xFFE9EFF5), shade: Color(0x6B748EAE), glow: Color(0x66889BBA),
+    ink: Color(0xFF4E617A), eyes: 'sad', mouth: 'frown', drops: 4,
+  ),
+  Mood.kietSuc: const _MoodSpec(
+    fill: Color(0xFFF0EFEB), shade: Color(0x5CA09888), glow: Color(0x52C0A894),
+    ink: Color(0xFF6E6656), eyes: 'heavy', mouth: 'flat', drops: 1,
+  ),
+};
+
+const double _box = 200;
+const double _bwX = (_box - 178) / 2; // 11
+const double _bwY = (_box - 120) / 2; // 40
+
+class May extends StatefulWidget {
+  final Mood mood;
+  final double size;
+
+  const May({super.key, this.mood = Mood.binhYen, this.size = 96});
+
+  @override
+  State<May> createState() => _MayState();
+}
+
+class _MayState extends State<May> with TickerProviderStateMixin {
+  late final AnimationController _swayCtrl;
+  late final AnimationController _floatCtrl;
+  late final AnimationController _sparkCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _swayCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 4500))..repeat();
+    _floatCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 7000))..repeat(reverse: true);
+    _sparkCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 3400))..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _swayCtrl.dispose();
+    _floatCtrl.dispose();
+    _sparkCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final m = _moods[widget.mood] ?? _moods[Mood.binhYen]!;
+    final scale = widget.size / _box;
+    final droop = m.eyes == 'heavy' ? 6.0 : 0.0;
+
+    return SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Center(
+        child: AnimatedBuilder(
+          animation: _floatCtrl,
+          builder: (context, child) {
+            final ty = -6.0 * _floatCtrl.value;
+            return Transform.translate(offset: Offset(0, ty), child: child);
+          },
+          child: Transform.scale(
+            scale: scale,
+            child: SizedBox(
+              width: _box,
+              height: _box,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  _glow(220, 190, m.glow, 0.35),
+                  _glow(160, 140, m.glow, 0.45),
+                  if (m.sparkly) ..._sparkles(),
+                  AnimatedBuilder(
+                    animation: _swayCtrl,
+                    builder: (context, child) {
+                      final tx = m.sway ? 3.0 * math.sin(_swayCtrl.value * 2 * math.pi) : 0.0;
+                      return Transform.translate(offset: Offset(tx, 0), child: child);
+                    },
+                    child: _cloudBody(m, droop),
+                  ),
+                  if (m.drops > 0) _rain(m.drops),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _glow(double w, double h, Color color, double opacity) {
+    return Positioned(
+      left: (_box - w) / 2,
+      top: (_box - h) / 2,
+      child: IgnorePointer(
+        child: Opacity(
+          opacity: opacity,
+          child: Container(
+            width: w,
+            height: h,
+            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _sparkles() {
+    return [
+      AnimatedBuilder(
+        animation: _sparkCtrl,
+        builder: (context, _) => Positioned(
+          left: 20,
+          top: 38,
+          child: Transform.rotate(
+            angle: math.pi / 4,
+            child: Opacity(
+              opacity: 0.15 + 0.55 * _sparkCtrl.value,
+              child: Container(width: 6, height: 6, color: const Color(0xB2F6D8A6)),
+            ),
+          ),
+        ),
+      ),
+      AnimatedBuilder(
+        animation: _sparkCtrl,
+        builder: (context, _) => Positioned(
+          right: 20,
+          top: 54,
+          child: Transform.rotate(
+            angle: math.pi / 4,
+            child: Opacity(
+              opacity: 0.15 + 0.55 * (1 - _sparkCtrl.value),
+              child: Container(width: 5, height: 5, color: const Color(0x99F6D8A6)),
+            ),
+          ),
+        ),
+      ),
+    ];
+  }
+
+  Widget _cloudBody(_MoodSpec m, double droop) {
+    return SizedBox(
+      width: _box,
+      height: _box,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // cloud lobes
+          _circle(_bwX + 14, _bwY + 34, 66, m.fill),
+          _circle(_bwX + 52, _bwY + 8, 88, m.fill),
+          _circle(_bwX + 108, _bwY + 38, 62, m.fill),
+          _roundedRect(_bwX + 2, _bwY + 56, 174, 60, 30, m.fill),
+          // underside shade
+          Positioned(
+            left: _bwX + 2,
+            top: _bwY + 82,
+            child: Container(
+              width: 174,
+              height: 34,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [m.shade.withValues(alpha: 0), m.shade],
+                ),
+              ),
+            ),
+          ),
+          // top shine
+          Positioned(
+            left: _bwX + 64,
+            top: _bwY + 22,
+            child: Opacity(
+              opacity: 0.85,
+              child: Container(
+                width: 52,
+                height: 22,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(26),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xF2FFFFFF), Color(0x00FFFFFF)],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (m.brows) ..._brows(),
+          _eye(m.eyes, 60, droop, m.ink),
+          _eye(m.eyes, 104, droop, m.ink),
+          if (m.cheeks) ..._cheeks(),
+          _mouth(m.mouth, m.ink),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _brows() {
+    return [
+      Positioned(
+        left: _bwX + 58,
+        top: _bwY + 50,
+        child: Transform.rotate(
+          angle: -12 * math.pi / 180,
+          child: Container(
+            width: 16,
+            height: 7,
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: const Color(0x99556E7A), width: 2)),
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(8)),
+            ),
+          ),
+        ),
+      ),
+      Positioned(
+        left: _bwX + 104,
+        top: _bwY + 50,
+        child: Transform.rotate(
+          angle: 12 * math.pi / 180,
+          child: Container(
+            width: 16,
+            height: 7,
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: const Color(0x99556E7A), width: 2)),
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(8)),
+            ),
+          ),
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _cheeks() {
+    Widget cheek(double left) => Positioned(
+          left: left,
+          top: _bwY + 76,
+          child: Container(
+            width: 15,
+            height: 9,
+            decoration: BoxDecoration(color: const Color(0x4DE8B0BE), borderRadius: BorderRadius.circular(6)),
+          ),
+        );
+    return [cheek(_bwX + 46), cheek(_bwX + 118)];
+  }
+
+  Widget _eye(String type, double x, double droop, Color ink) {
+    if (type == 'arc') {
+      return Positioned(
+        left: _bwX + x,
+        top: _bwY + 62 + droop,
+        child: Opacity(
+          opacity: 0.8,
+          child: Container(
+            width: 15,
+            height: 8,
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: ink, width: 2)),
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(15), topRight: Radius.circular(15)),
+            ),
+          ),
+        ),
+      );
+    }
+    if (type == 'sad') {
+      return Positioned(
+        left: _bwX + x + 3,
+        top: _bwY + 64,
+        child: Opacity(
+          opacity: 0.75,
+          child: Container(width: 9, height: 9, decoration: BoxDecoration(color: ink, shape: BoxShape.circle)),
+        ),
+      );
+    }
+    if (type == 'heavy') {
+      return Positioned(
+        left: _bwX + x,
+        top: _bwY + 68,
+        child: Opacity(
+          opacity: 0.7,
+          child: Container(width: 15, height: 3, decoration: BoxDecoration(color: ink, borderRadius: BorderRadius.circular(2))),
+        ),
+      );
+    }
+    return Positioned(
+      left: _bwX + x + 4,
+      top: _bwY + 63,
+      child: Opacity(
+        opacity: 0.72,
+        child: Container(width: 7, height: 7, decoration: BoxDecoration(color: ink, shape: BoxShape.circle)),
+      ),
+    );
+  }
+
+  Widget _mouth(String type, Color ink) {
+    const cx = _bwX + 89; // 50% of the 178-wide bodyWrap
+    if (type == 'grin') {
+      return Positioned(
+        left: cx - 9.5,
+        top: _bwY + 78,
+        child: Opacity(
+          opacity: 0.75,
+          child: Container(
+            width: 19,
+            height: 10,
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: ink, width: 2)),
+              borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(14), bottomRight: Radius.circular(14)),
+            ),
+          ),
+        ),
+      );
+    }
+    if (type == 'smile') {
+      return Positioned(
+        left: cx - 6.5,
+        top: _bwY + 79,
+        child: Opacity(
+          opacity: 0.62,
+          child: Container(
+            width: 13,
+            height: 7,
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: ink, width: 2)),
+              borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(10), bottomRight: Radius.circular(10)),
+            ),
+          ),
+        ),
+      );
+    }
+    if (type == 'line') {
+      return Positioned(
+        left: cx - 6.5,
+        top: _bwY + 82,
+        child: Opacity(
+          opacity: 0.6,
+          child: Container(width: 13, height: 2, decoration: BoxDecoration(color: ink, borderRadius: BorderRadius.circular(2))),
+        ),
+      );
+    }
+    if (type == 'o') {
+      return Positioned(
+        left: cx - 4,
+        top: _bwY + 78,
+        child: Opacity(
+          opacity: 0.7,
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: ink, width: 2)),
+          ),
+        ),
+      );
+    }
+    if (type == 'frown') {
+      return Positioned(
+        left: cx - 6.5,
+        top: _bwY + 84,
+        child: Opacity(
+          opacity: 0.6,
+          child: Container(
+            width: 13,
+            height: 7,
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: ink, width: 2)),
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
+            ),
+          ),
+        ),
+      );
+    }
+    return Positioned(
+      left: cx - 5,
+      top: _bwY + 84,
+      child: Opacity(
+        opacity: 0.5,
+        child: Container(width: 10, height: 2, decoration: BoxDecoration(color: ink, borderRadius: BorderRadius.circular(2))),
+      ),
+    );
+  }
+
+  Widget _circle(double left, double top, double diameter, Color color) {
+    return Positioned(
+      left: left,
+      top: top,
+      child: Container(width: diameter, height: diameter, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+    );
+  }
+
+  Widget _roundedRect(double left, double top, double w, double h, double r, Color color) {
+    return Positioned(
+      left: left,
+      top: top,
+      child: Container(width: w, height: h, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(r))),
+    );
+  }
+
+  Widget _rain(int count) {
+    return Positioned(
+      left: 0,
+      right: 0,
+      top: 132,
+      height: 60,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: List.generate(count, (i) => _RainDrop(index: i)),
+      ),
+    );
+  }
+}
+
+class _RainDrop extends StatefulWidget {
+  final int index;
+  const _RainDrop({required this.index});
+
+  @override
+  State<_RainDrop> createState() => _RainDropState();
+}
+
+class _RainDropState extends State<_RainDrop> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1900));
+    Future.delayed(Duration(milliseconds: widget.index * 420), () {
+      if (mounted) _ctrl.repeat();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final w = widget.index.isOdd ? 5.0 : 6.0;
+    final h = widget.index.isOdd ? 11.0 : 13.0;
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, _) {
+        final t = _ctrl.value;
+        final ty = 46.0 * t;
+        double opacity;
+        if (t < 0.18) {
+          opacity = t / 0.18 * 0.85;
+        } else {
+          opacity = 0.85 * (1 - (t - 0.18) / 0.82);
+        }
+        return Positioned(
+          left: 34.0 + widget.index * 34,
+          top: ty,
+          child: Opacity(
+            opacity: opacity.clamp(0.0, 1.0),
+            child: Container(
+              width: w,
+              height: h,
+              decoration: BoxDecoration(color: const Color(0x9E7E98B8), borderRadius: BorderRadius.circular(w / 2)),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
