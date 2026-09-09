@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,6 +11,17 @@ import '../services/auth_user.dart';
 import '../services/journal_api.dart';
 
 enum PlanTier { free, monthly, yearly }
+
+/// One completed (or abandoned) meditation/breathing play, logged locally
+/// only — there's no backend table for this yet.
+class MeditationLog {
+  final DateTime date;
+  final int seconds;
+  const MeditationLog(this.date, this.seconds);
+
+  Map<String, dynamic> toJson() => {'date': date.toIso8601String(), 'seconds': seconds};
+  factory MeditationLog.fromJson(Map<String, dynamic> j) => MeditationLog(DateTime.parse(j['date'] as String), j['seconds'] as int);
+}
 
 class TagDef {
   final String key;
@@ -70,6 +83,28 @@ class AppState extends ChangeNotifier {
   static const _kName = 'auth_name';
   static const _kProvider = 'auth_provider';
   static const _kToken = 'auth_token';
+  static const _kMeditationLog = 'meditation_log';
+
+  final List<MeditationLog> meditationLog = [];
+
+  /// Records actual listened time for a session (called from PlayerScreen on
+  /// dispose). Local-only for now — no backend table for this yet.
+  Future<void> addMeditationSeconds(int seconds) async {
+    if (seconds <= 0) return;
+    meditationLog.add(MeditationLog(DateTime.now(), seconds));
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_kMeditationLog, meditationLog.map((m) => jsonEncode(m.toJson())).toList());
+  }
+
+  int meditationSecondsInRange(DateTime start, DateTime end) {
+    var total = 0;
+    for (final m in meditationLog) {
+      final d = DateTime(m.date.year, m.date.month, m.date.day);
+      if (!d.isBefore(start) && !d.isAfter(end)) total += m.seconds;
+    }
+    return total;
+  }
 
   final List<JournalEntry> entries = [
     JournalEntry(
@@ -130,6 +165,10 @@ class AppState extends ChangeNotifier {
     authName = prefs.getString(_kName);
     authProvider = prefs.getString(_kProvider);
     authToken = prefs.getString(_kToken);
+    final rawLog = prefs.getStringList(_kMeditationLog);
+    if (rawLog != null) {
+      meditationLog.addAll(rawLog.map((s) => MeditationLog.fromJson(jsonDecode(s) as Map<String, dynamic>)));
+    }
     notifyListeners();
 
     final restored = await AuthService.instance.restore();

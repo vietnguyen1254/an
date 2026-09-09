@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:provider/provider.dart';
 import '../../models/mood.dart';
+import '../../state/app_state.dart';
 import '../../theme/colors.dart';
 import '../../widgets/may.dart';
 
@@ -50,12 +52,14 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
   Timer? _phaseTimer;
   Timer? _tickTimer;
   late final AnimationController _breatheCtrl;
+  late final AppState _appState;
 
   int get _totalSeconds => _duration?.inSeconds ?? widget.minutes * 60;
 
   @override
   void initState() {
     super.initState();
+    _appState = context.read<AppState>();
     _breatheCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 4500))..repeat(reverse: true);
     _phaseTimer = Timer.periodic(const Duration(milliseconds: 4500), (_) {
       if (_playing) setState(() => _phase = (_phase + 1) % 3);
@@ -93,6 +97,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
 
   @override
   void dispose() {
+    _appState.addMeditationSeconds(_elapsed.inSeconds);
     _phaseTimer?.cancel();
     _tickTimer?.cancel();
     _breatheCtrl.dispose();

@@ -38,6 +38,13 @@ String _rangeHeaderLabel(bool isWeek, DateTime start, DateTime end) {
   return 'Tuần ${start.day} thg ${start.month} – ${end.day} thg ${end.month}';
 }
 
+String _formatMinutes(int totalMinutes) {
+  if (totalMinutes < 60) return '$totalMinutes phút';
+  final h = totalMinutes ~/ 60;
+  final m = totalMinutes % 60;
+  return m == 0 ? '$h giờ' : '$h giờ $m';
+}
+
 class JournalScreen extends StatefulWidget {
   const JournalScreen({super.key});
 
@@ -47,6 +54,11 @@ class JournalScreen extends StatefulWidget {
 
 class _JournalScreenState extends State<JournalScreen> {
   int _tab = 0; // 0 = Tuần, 1 = Tháng
+  int _offset = 0; // periods back from the current one; 0 = current, never > 0
+
+  void _shift(int delta) {
+    setState(() => _offset = (_offset + delta).clamp(-9999, 0));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,11 +66,13 @@ class _JournalScreenState extends State<JournalScreen> {
     final now = DateTime.now();
     final isWeek = _tab == 0;
 
-    final rangeStart = isWeek
-        ? DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1))
-        : DateTime(now.year, now.month, 1);
-    final rangeDays = isWeek ? 7 : DateTime(now.year, now.month + 1, 0).day;
+    final anchor = isWeek
+        ? DateTime(now.year, now.month, now.day).add(Duration(days: 7 * _offset))
+        : DateTime(now.year, now.month + _offset, 1);
+    final rangeStart = isWeek ? anchor.subtract(Duration(days: anchor.weekday - 1)) : anchor;
+    final rangeDays = isWeek ? 7 : DateTime(rangeStart.year, rangeStart.month + 1, 0).day;
     final rangeEnd = rangeStart.add(Duration(days: rangeDays - 1));
+    final canGoForward = _offset < 0;
 
     final byDay = <String, JournalEntry>{};
     for (final e in entries) {
@@ -74,6 +88,7 @@ class _JournalScreenState extends State<JournalScreen> {
 
     final topTag = _topTag(entriesInRange);
     final insight = generateInsight(entriesInRange);
+    final meditationMinutes = context.watch<AppState>().meditationSecondsInRange(rangeStart, rangeEnd) ~/ 60;
 
     void openDay(DateTime d) {
       final entry = byDay[_dayKey(d)];
@@ -100,7 +115,10 @@ class _JournalScreenState extends State<JournalScreen> {
                     final active = i == _tab;
                     return Expanded(
                       child: GestureDetector(
-                        onTap: () => setState(() => _tab = i),
+                        onTap: () => setState(() {
+                          _tab = i;
+                          _offset = 0;
+                        }),
                         child: Container(
                           height: 32,
                           alignment: Alignment.center,
@@ -119,15 +137,37 @@ class _JournalScreenState extends State<JournalScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Flexible(child: Text(_rangeHeaderLabel(isWeek, rangeStart, rangeEnd), style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.ink))),
-                      Text('$recordedDays / $rangeDays ngày', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.45))),
-                    ]),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _NavArrow(icon: Icons.chevron_left_rounded, onTap: () => _shift(-1)),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Text(_rangeHeaderLabel(isWeek, rangeStart, rangeEnd), style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.ink)),
+                              const SizedBox(height: 2),
+                              Text('$recordedDays / $rangeDays ngày', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.45))),
+                            ],
+                          ),
+                        ),
+                        _NavArrow(icon: Icons.chevron_right_rounded, onTap: canGoForward ? () => _shift(1) : null),
+                      ],
+                    ),
                     const SizedBox(height: 16),
-                    if (isWeek)
-                      _WeekGrid(start: rangeStart, byDay: byDay, onTapDay: openDay)
-                    else
-                      _MonthGrid(start: rangeStart, days: rangeDays, byDay: byDay, onTapDay: openDay),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onHorizontalDragEnd: (details) {
+                        final v = details.primaryVelocity ?? 0;
+                        if (v < -200) {
+                          _shift(1);
+                        } else if (v > 200) {
+                          _shift(-1);
+                        }
+                      },
+                      child: isWeek
+                          ? _WeekGrid(start: rangeStart, byDay: byDay, onTapDay: openDay)
+                          : _MonthGrid(start: rangeStart, days: rangeDays, byDay: byDay, onTapDay: openDay),
+                    ),
                     const SizedBox(height: 18),
                     Wrap(spacing: 14, runSpacing: 8, children: [
                       for (final m in moodOrder) _Legend(color: moodColors[m]!, label: moodLabels[m]!),
@@ -137,16 +177,19 @@ class _JournalScreenState extends State<JournalScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(insight.label, style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: AppColors.ink.withValues(alpha: 0.45))),
-                    const SizedBox(height: 10),
-                    Text(insight.text, style: const TextStyle(fontFamily: 'Lora', fontSize: 18, height: 27 / 18, color: AppColors.ink)),
-                  ],
+              SizedBox(
+                width: double.infinity,
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(insight.label, style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: AppColors.ink.withValues(alpha: 0.45))),
+                      const SizedBox(height: 10),
+                      Text(insight.text, style: const TextStyle(fontFamily: 'Lora', fontSize: 18, height: 27 / 18, color: AppColors.ink)),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
@@ -159,11 +202,32 @@ class _JournalScreenState extends State<JournalScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(child: _StatCard(label: 'Thiền', value: '0 phút', meta: isWeek ? 'tuần này' : 'tháng này')),
+                Expanded(child: _StatCard(label: 'Thiền', value: _formatMinutes(meditationMinutes), meta: isWeek ? 'tuần này' : 'tháng này')),
               ]),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _NavArrow extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+  const _NavArrow({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 30,
+        height: 30,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.ink.withValues(alpha: enabled ? 0.05 : 0.02)),
+        child: Icon(icon, size: 20, color: AppColors.ink.withValues(alpha: enabled ? 0.6 : 0.2)),
       ),
     );
   }
@@ -223,21 +287,43 @@ class _MonthGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 7,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 7,
-      mainAxisSpacing: 7,
-      children: List.generate(days, (i) {
-        final day = start.add(Duration(days: i));
-        final entry = byDay[_dayKey(day)];
-        final color = entry != null ? moodColors[entry.mood]! : _emptyDayColor;
-        return GestureDetector(
-          onTap: () => onTapDay(day),
-          child: Container(decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(6))),
-        );
-      }),
+    // start.weekday: 1=Monday..7=Sunday — leading blanks so day 1 lands in
+    // its real weekday column (grid header/legend is Monday-first).
+    final leadingBlanks = start.weekday - 1;
+    final today = DateTime.now();
+    return Column(
+      children: [
+        Row(
+          children: _weekdayShort.map((d) => Expanded(child: Center(child: Text(d, style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 10.5, fontWeight: FontWeight.w500, color: AppColors.ink.withValues(alpha: 0.35)))))).toList(),
+        ),
+        const SizedBox(height: 6),
+        GridView.count(
+          crossAxisCount: 7,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 7,
+          mainAxisSpacing: 7,
+          children: List.generate(leadingBlanks + days, (i) {
+            if (i < leadingBlanks) return const SizedBox.shrink();
+            final day = start.add(Duration(days: i - leadingBlanks));
+            final entry = byDay[_dayKey(day)];
+            final color = entry != null ? moodColors[entry.mood]! : _emptyDayColor;
+            final isToday = _dayKey(day) == _dayKey(today);
+            return GestureDetector(
+              onTap: () => onTapDay(day),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(6),
+                  border: isToday ? Border.all(color: AppColors.ink.withValues(alpha: 0.55), width: 1.5) : null,
+                ),
+                alignment: Alignment.center,
+                child: Text('${day.day}', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 10.5, fontWeight: FontWeight.w500, color: entry != null ? Colors.white.withValues(alpha: 0.9) : AppColors.ink.withValues(alpha: 0.35))),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 }

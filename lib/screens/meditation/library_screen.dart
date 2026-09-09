@@ -161,7 +161,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(22, 20, 22, 0),
-                child: Text('BÀI THIỀN', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: AppColors.ink.withValues(alpha: 0.45))),
+                child: Text('BÀI HƯỚNG DẪN', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: AppColors.ink.withValues(alpha: 0.45))),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
@@ -191,7 +191,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         for (final s in sessions) ...[
                           _ListMeditationCard(
                             title: s.title,
-                            meta: 'Thiền dẫn · ${guideName(s.guide)} · ${s.minutes} phút',
+                            meta: 'Thiền dẫn · ${guideName(s.guide)}',
+                            duration: '${s.minutes} phút',
                             color: s.guide == 'justin' ? AppColors.sageTint : AppColors.lavenderTint,
                             imageUrl: s.imageUrl != null ? SessionsApi.instance.resolve(s.imageUrl!) : null,
                             free: s.isFree,
@@ -295,11 +296,12 @@ class _RecommendedMayState extends State<_RecommendedMay> with SingleTickerProvi
 class _ListMeditationCard extends StatelessWidget {
   final String title;
   final String meta;
+  final String duration;
   final Color color;
   final String? imageUrl;
   final bool free;
   final VoidCallback onTap;
-  const _ListMeditationCard({required this.title, required this.meta, required this.color, this.imageUrl, required this.free, required this.onTap});
+  const _ListMeditationCard({required this.title, required this.meta, required this.duration, required this.color, this.imageUrl, required this.free, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -324,6 +326,8 @@ class _ListMeditationCard extends StatelessWidget {
                 Text(title, style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.ink)),
                 const SizedBox(height: 3),
                 Text(meta, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.5))),
+                const SizedBox(height: 2),
+                Text(duration, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.5))),
               ],
             ),
           ),
