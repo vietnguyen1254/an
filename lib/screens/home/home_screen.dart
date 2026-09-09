@@ -33,6 +33,9 @@ class _HomeScreenState extends State<HomeScreen> {
       SessionsApi.instance.fetchAll().then((sessions) {
         if (!mounted) return;
         setState(() => _recommended = pickRecommendation(sessions, entries.first.mood));
+      }).catchError((Object e) {
+        // No catalog / network hiccup — just don't show the card.
+        debugPrint('HomeScreen: failed to load recommendation: $e');
       });
     }
   }

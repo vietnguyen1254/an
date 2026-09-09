@@ -73,6 +73,7 @@ class _JournalScreenState extends State<JournalScreen> {
     final recordedDays = List.generate(rangeDays, (i) => rangeStart.add(Duration(days: i))).where((d) => byDay.containsKey(_dayKey(d))).length;
 
     final topTag = _topTag(entriesInRange);
+    final insight = generateInsight(entriesInRange);
 
     void openDay(DateTime d) {
       final entry = byDay[_dayKey(d)];
@@ -142,9 +143,9 @@ class _JournalScreenState extends State<JournalScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('MÂY NHẬN THẤY', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: AppColors.ink.withValues(alpha: 0.45))),
+                    Text(insight.label, style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: AppColors.ink.withValues(alpha: 0.45))),
                     const SizedBox(height: 10),
-                    Text(generateInsight(entriesInRange), style: const TextStyle(fontFamily: 'Lora', fontSize: 18, height: 27 / 18, color: AppColors.ink)),
+                    Text(insight.text, style: const TextStyle(fontFamily: 'Lora', fontSize: 18, height: 27 / 18, color: AppColors.ink)),
                   ],
                 ),
               ),

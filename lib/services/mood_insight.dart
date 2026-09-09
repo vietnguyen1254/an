@@ -15,9 +15,18 @@ String _timeOfDay(int hour) {
   return 'tối';
 }
 
-// Sentence banks, grouped by what the underlying data actually supports —
-// never fill a placeholder with a guess, only pick from the bucket that
-// matches what was really found in entriesInRange.
+class MoodInsight {
+  final String label;
+  final String text;
+  const MoodInsight(this.label, this.text);
+}
+
+const _labelNoticed = 'MÂY NHẬN THẤY';
+const _labelEncourage = 'MÂY NHẮN NHỦ';
+
+// "Mây nhận thấy" — data-driven only. Every sentence here starts with either
+// a fixed word or a capitalized weekday ({pDay}); {nTime}/{nDay} are always
+// lowercase so they must never open a sentence (that reads as a typo).
 const _bothTemplates = [
   'Bạn bình yên nhất vào {pDay}, và hay lo lắng vào {nTime} {nDay}.',
   '{pDay} thường là ngày nhẹ nhõm nhất của bạn, trong khi {nTime} {nDay} lại hay mang nhiều lo âu hơn.',
@@ -42,28 +51,57 @@ const _positiveOnlyTemplates = [
 
 const _negativeOnlyTemplates = [
   'Bạn hay lo lắng vào {nTime} {nDay}.',
-  '{nTime} {nDay} thường là lúc bạn dễ căng thẳng nhất.',
+  'Có vẻ {nTime} {nDay} thường là lúc bạn dễ căng thẳng nhất.',
   'Mình để ý {nTime} {nDay} hay khiến bạn mệt mỏi hơn.',
   'Cảm xúc của bạn hay chùng xuống vào {nTime} {nDay}.',
   'Có vẻ {nTime} {nDay} không phải là khoảng thời gian dễ chịu với bạn.',
-  '{nTime} {nDay} dường như là lúc lo âu hay ghé thăm bạn nhất.',
+  'Dường như {nTime} {nDay} là lúc lo âu hay ghé thăm bạn nhất.',
   'Bạn thường thấy nặng lòng hơn vào {nTime} {nDay}.',
   'Nhìn lại, {nTime} {nDay} hay là lúc bạn cần được nghỉ ngơi nhất.',
 ];
 
-const _noPatternTemplates = [
-  'Mây cần thêm vài ngày ghi nhận nữa để hiểu bạn rõ hơn.',
-  'Ghi lại đều đặn hơn một chút, Mây sẽ nhận ra được nhịp cảm xúc của bạn.',
-  'Chưa đủ dữ liệu để Mây nhận ra quy luật rõ ràng — cứ tiếp tục ghi nhé.',
-  'Mây đang lắng nghe, nhưng cần thêm thời gian để hiểu bạn hơn.',
-  'Cảm xúc của bạn khá đa dạng trong khoảng này, chưa thấy ngày nào nổi bật hẳn.',
-  'Mây chưa thấy quy luật rõ ràng — mỗi ngày của bạn đều khác nhau.',
+// "Mây nhắn nhủ" — used only when there isn't enough data for a real
+// observation. Generic encouragement about meditating, not a claim about
+// the user's own data, so no accuracy risk.
+const _encourageTemplates = [
+  'Mỗi sáng dành ba phút cho hơi thở, cả ngày sẽ nhẹ nhàng hơn rất nhiều.',
+  'Một buổi thiền ngắn trước khi ngủ giúp tâm trí bạn thật sự được nghỉ ngơi.',
+  'Thử thiền vào buổi sáng xem sao — bắt đầu ngày mới với một tâm trí tĩnh lặng.',
+  'Chỉ năm phút mỗi tối cũng đủ để bạn buông bớt những lo âu trong ngày.',
+  'Duy trì thói quen thiền đều đặn giúp bạn bình tĩnh hơn trước những điều bất ngờ.',
+  'Một hơi thở sâu, một khoảnh khắc chậm lại — đó đã là thiền rồi.',
+  'Buổi tối là lúc tuyệt vời để thiền, giúp bạn ngủ ngon và sâu hơn.',
+  'Hãy thử dành ra vài phút mỗi sáng để lắng nghe cơ thể mình trước khi bắt đầu ngày mới.',
+  'Thiền đều đặn không cần nhiều thời gian, chỉ cần đều đặn.',
+  'Một chút tĩnh lặng mỗi ngày giúp bạn hiểu cảm xúc của mình rõ hơn.',
+  'Bạn đã thử thiền hôm nay chưa? Chỉ vài phút thôi cũng tạo ra khác biệt.',
+  'Buổi sáng sớm, khi tâm trí còn tĩnh, là thời điểm rất tốt để bắt đầu thiền.',
+  'Thiền trước khi ngủ giúp những suy nghĩ ngổn ngang trong ngày lắng lại.',
+  'Duy trì một nhịp thiền đều đặn — sáng hoặc tối — sẽ giúp bạn cảm thấy vững vàng hơn.',
+  'Chăm sóc tâm trí cũng quan trọng như chăm sóc cơ thể — hãy dành thời gian cho nó mỗi ngày.',
+  'Một vài hơi thở chậm rãi vào buổi sáng có thể thay đổi cả ngày của bạn.',
+  'Thử dành cho mình một khoảng lặng nhỏ mỗi tối, trước khi những suy nghĩ ùa về.',
+  'Thiền không cần hoàn hảo, chỉ cần bạn quay lại với nó mỗi ngày.',
+  'Một thói quen thiền nhỏ mỗi sáng sẽ giúp bạn phản ứng nhẹ nhàng hơn với căng thẳng.',
+  'Buổi tối là lúc lý tưởng để thả lỏng và để cơ thể bạn thật sự nghỉ ngơi.',
+  'Bạn không cần nhiều thời gian — chỉ vài phút thiền mỗi ngày cũng đủ tạo thay đổi.',
+  'Hãy biến thiền buổi sáng thành một phần nhỏ trong nhịp sống của bạn.',
+  'Một buổi thiền ngắn giữa ngày có thể giúp bạn lấy lại sự tập trung.',
+  'Đều đặn quan trọng hơn thời lượng — thiền năm phút mỗi ngày tốt hơn năm mươi phút một lần.',
+  'Hãy thử kết thúc một ngày dài bằng một bài thiền nhẹ nhàng thay vì lướt điện thoại.',
+  'Thiền giúp bạn tạo một khoảng cách nhỏ giữa cảm xúc và phản ứng — rất đáng để luyện tập mỗi ngày.',
+  'Mỗi buổi sáng bắt đầu bằng vài phút tĩnh lặng, bạn sẽ thấy mình bình tĩnh hơn cả ngày dài.',
+  'Nếu hôm nay chưa thiền, buổi tối vẫn còn kịp — chỉ cần vài phút thôi.',
+  'Một tâm trí được nghỉ ngơi mỗi ngày sẽ giúp bạn đón nhận mọi thứ nhẹ nhàng hơn.',
+  'Hãy thử biến thiền thành điểm dừng nhỏ giữa những điều bận rộn trong ngày.',
 ];
 
-/// Picks a random (but factually accurate) insight sentence from
-/// [entriesInRange]. Never fabricates a day/time that isn't backed by the
-/// actual data — falls back to an honest "not enough data" line instead.
-String generateInsight(List<JournalEntry> entriesInRange) {
+/// Picks a random (but factually accurate) insight from [entriesInRange].
+/// When there's a real pattern in the data, returns a "Mây nhận thấy"
+/// observation built only from what's actually there. When there isn't
+/// enough data for a real observation, returns a "Mây nhắn nhủ"
+/// encouragement instead — never a vague filler mislabeled as a finding.
+MoodInsight generateInsight(List<JournalEntry> entriesInRange) {
   final posCount = <int, int>{};
   final negSlot = <String, int>{};
   for (final e in entriesInRange) {
@@ -93,13 +131,15 @@ String generateInsight(List<JournalEntry> entriesInRange) {
   String pick(List<String> pool) => pool[rand.nextInt(pool.length)];
 
   if (pDay != null && nDay != null) {
-    return pick(_bothTemplates).replaceAll('{pDay}', pDay).replaceAll('{nDay}', nDay).replaceAll('{nTime}', nTime!);
+    final text = pick(_bothTemplates).replaceAll('{pDay}', pDay).replaceAll('{nDay}', nDay).replaceAll('{nTime}', nTime!);
+    return MoodInsight(_labelNoticed, text);
   }
   if (pDay != null) {
-    return pick(_positiveOnlyTemplates).replaceAll('{pDay}', pDay);
+    return MoodInsight(_labelNoticed, pick(_positiveOnlyTemplates).replaceAll('{pDay}', pDay));
   }
   if (nDay != null) {
-    return pick(_negativeOnlyTemplates).replaceAll('{nDay}', nDay).replaceAll('{nTime}', nTime!);
+    final text = pick(_negativeOnlyTemplates).replaceAll('{nDay}', nDay).replaceAll('{nTime}', nTime!);
+    return MoodInsight(_labelNoticed, text);
   }
-  return pick(_noPatternTemplates);
+  return MoodInsight(_labelEncourage, pick(_encourageTemplates));
 }

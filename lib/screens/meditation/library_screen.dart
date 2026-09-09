@@ -36,6 +36,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
       if (!mounted) return;
       final mood = context.read<AppState>().draftMood;
       setState(() => _recommended = pickRecommendation(sessions, mood));
+    }).catchError((Object e) {
+      debugPrint('LibraryScreen: failed to load recommendation: $e');
     });
   }
 
