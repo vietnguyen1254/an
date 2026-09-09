@@ -6,14 +6,15 @@ import 'meditation/library_screen.dart';
 import 'profile/profile_screen.dart';
 
 class MainTabs extends StatefulWidget {
-  const MainTabs({super.key});
+  final int initialIndex;
+  const MainTabs({super.key, this.initialIndex = 0});
 
   @override
   State<MainTabs> createState() => _MainTabsState();
 }
 
 class _MainTabsState extends State<MainTabs> {
-  int _index = 0;
+  late int _index = widget.initialIndex;
 
   static const _screens = [HomeScreen(), LibraryScreen(), JournalScreen(), ProfileScreen()];
   static const _labels = ['Cảm xúc', 'Thiền/Thở', 'Lịch sử', 'Bạn'];
