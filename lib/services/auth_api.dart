@@ -11,21 +11,21 @@ import 'auth_user.dart';
 ///
 /// After every successful SSO sign-in the app calls [syncSession] with the
 /// Firebase ID token; the backend verifies it (Firebase Admin SDK) and
-/// upserts the user / issues its own session.
-///
-/// There is no backend yet, so failures here are swallowed and logged — the
-/// app keeps working locally. Once [AppConfig.hasBackend] is true, tighten
-/// this up (throw on non-2xx, return the session payload, etc.).
+/// upserts the user, returning an app JWT used as the Bearer token for every
+/// other authenticated call (journal entries, etc). Failures are swallowed
+/// and logged — the app keeps working locally/offline either way.
 class AuthApi {
   AuthApi._();
   static final AuthApi instance = AuthApi._();
 
-  Future<void> syncSession(AuthUser user) async {
+  /// Returns the app JWT on success, null if the backend isn't reachable
+  /// (or not configured) — callers should keep working offline in that case.
+  Future<String?> syncSession(AuthUser user) async {
     if (!AppConfig.hasBackend) {
       if (kDebugMode) {
         debugPrint('AuthApi: no backend configured, skipping session sync');
       }
-      return;
+      return null;
     }
 
     final uri = Uri.parse('${AppConfig.apiBaseUrl}/v1/auth/session');
@@ -48,14 +48,17 @@ class AuthApi {
 
       if (res.statusCode >= 200 && res.statusCode < 300) {
         if (kDebugMode) debugPrint('AuthApi: session synced');
-      } else {
-        if (kDebugMode) {
-          debugPrint('AuthApi: session sync failed ${res.statusCode}');
-        }
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        return body['token'] as String?;
       }
+      if (kDebugMode) {
+        debugPrint('AuthApi: session sync failed ${res.statusCode}');
+      }
+      return null;
     } catch (e) {
       // Network down / backend not up yet — don't block sign-in.
       if (kDebugMode) debugPrint('AuthApi: session sync error $e');
+      return null;
     }
   }
 }

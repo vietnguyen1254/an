@@ -20,7 +20,7 @@ class AppColors {
   static const sageTint = Color(0xFFE3EDE7);
   static const sageTintText = Color(0xFF3D6555);
 
-  static const lavender = Color(0xFFA79BC4);
+  static const lavender = Color(0xFF8D77C4);
   static const lavenderTint = Color(0xFFEDE9F4);
   static const lavenderTintText = Color(0xFF4F4468);
 

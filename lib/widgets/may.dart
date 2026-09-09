@@ -71,7 +71,7 @@ final Map<Mood, _MoodSpec> _moods = {
     glow: Color(0x70AAA0C4),
     ink: Color(0xFF5D5375),
     eyes: 'dot',
-    mouth: 'o',
+    mouth: 'wavy',
     brows: true,
     sway: true,
   ),
@@ -521,6 +521,20 @@ class _MayState extends State<May> with TickerProviderStateMixin {
         ),
       );
     }
+    if (type == 'wavy') {
+      return Positioned(
+        left: cx - 9,
+        top: _bwY + 80,
+        child: Opacity(
+          opacity: 0.7,
+          child: SizedBox(
+            width: 18,
+            height: 9,
+            child: CustomPaint(painter: _WavyMouthPainter(ink)),
+          ),
+        ),
+      );
+    }
     if (type == 'frown') {
       return Positioned(
         left: cx - 6.5,
@@ -669,4 +683,28 @@ class _RainDropState extends State<_RainDrop>
       },
     );
   }
+}
+
+/// A small nervous "~" mouth — reads as uneasy rather than the open "o"
+/// (which read as surprise) for Mood.loLang.
+class _WavyMouthPainter extends CustomPainter {
+  final Color color;
+  const _WavyMouthPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final path = Path()
+      ..moveTo(0, size.height * 0.5)
+      ..quadraticBezierTo(size.width * 0.25, 0, size.width * 0.5, size.height * 0.5)
+      ..quadraticBezierTo(size.width * 0.75, size.height, size.width, size.height * 0.5);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _WavyMouthPainter oldDelegate) => oldDelegate.color != color;
 }

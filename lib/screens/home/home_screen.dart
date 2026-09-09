@@ -111,7 +111,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       label: isFirstDay ? 'Ghi cảm xúc đầu tiên' : 'Ghi lại cảm xúc',
                       variant: AppButtonVariant.sage,
                       height: 50,
-                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MoodCheckInScreen())),
+                      onPressed: () {
+                        context.read<AppState>().beginDraftEntry();
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MoodCheckInScreen()));
+                      },
                     ),
                   ],
                 ),

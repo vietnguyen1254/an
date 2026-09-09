@@ -37,7 +37,7 @@ class DayDetailScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Tháng 9',
+                    'Tháng ${entry.entryDate.month}',
                     style: TextStyle(
                       fontFamily: 'BeVietnamPro',
                       fontSize: 14,
