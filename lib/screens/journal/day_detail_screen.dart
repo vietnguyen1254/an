@@ -93,6 +93,7 @@ class DayDetailScreen extends StatelessWidget {
                 height: 138,
                 child: Center(child: May(mood: entry.mood, size: 130)),
               ),
+              const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(

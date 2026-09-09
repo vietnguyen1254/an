@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/meditation_session.dart';
@@ -26,6 +28,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
   final _searchCtrl = TextEditingController();
   String _query = '';
   MeditationSession? _recommended;
+
+  /// Always a positive expression on the recommendation card — not tied to
+  /// the recorded mood that produced the recommendation.
+  final Mood _cardMood = Random().nextBool() ? Mood.vui : Mood.binhYen;
 
   @override
   void initState() {
@@ -151,7 +157,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               if (_recommended != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(22, 18, 22, 0),
-                  child: _RecommendedCard(session: _recommended!, mood: context.watch<AppState>().draftMood, onTap: () => openSession(_recommended!)),
+                  child: _RecommendedCard(session: _recommended!, mood: _cardMood, onTap: () => openSession(_recommended!)),
                 ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(22, 20, 22, 0),
