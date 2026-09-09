@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/journal_entry.dart';
@@ -56,6 +58,25 @@ class _JournalScreenState extends State<JournalScreen> {
   int _tab = 0; // 0 = Tuần, 1 = Tháng
   int _offset = 0; // periods back from the current one; 0 = current, never > 0
   double _dragAccum = 0;
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // This screen stays alive (MainTabs keeps every tab mounted via
+    // IndexedStack) — meditation minutes get logged from PlayerScreen on a
+    // different tab, so poll instead of relying only on AppState's own
+    // notifyListeners reaching this screen while it's off-screen.
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
 
   void _shift(int delta) {
     setState(() => _offset = (_offset + delta).clamp(-9999, 0));
@@ -196,17 +217,22 @@ class _JournalScreenState extends State<JournalScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              Row(children: [
-                Expanded(
-                  child: _StatCard(
-                    label: 'Chủ đề nổi bật',
-                    value: topTag?.label ?? '—',
-                    meta: topTag != null ? '${topTag.count} lần trong $rangeDays ngày' : 'Chưa có dữ liệu',
-                  ),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _StatCard(
+                        label: 'Chủ đề nổi bật',
+                        value: topTag?.label ?? '—',
+                        meta: topTag != null ? '${topTag.count} lần trong $rangeDays ngày' : 'Chưa có dữ liệu',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: _StatCard(label: 'Thiền', value: _formatMinutes(meditationMinutes), meta: isWeek ? 'tuần này' : 'tháng này')),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(child: _StatCard(label: 'Thiền', value: _formatMinutes(meditationMinutes), meta: isWeek ? 'tuần này' : 'tháng này')),
-              ]),
+              ),
             ],
           ),
         ),

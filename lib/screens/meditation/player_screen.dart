@@ -97,7 +97,12 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
 
   @override
   void dispose() {
-    _appState.addMeditationSeconds(_elapsed.inSeconds);
+    // Deferred to after this frame: notifyListeners() during the pop
+    // transition (this widget being disposed) could otherwise land in an
+    // awkward point of the pipeline for listeners elsewhere in the tree.
+    final seconds = _elapsed.inSeconds;
+    final appState = _appState;
+    WidgetsBinding.instance.addPostFrameCallback((_) => appState.addMeditationSeconds(seconds));
     _phaseTimer?.cancel();
     _tickTimer?.cancel();
     _breatheCtrl.dispose();
