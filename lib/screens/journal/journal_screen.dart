@@ -109,7 +109,10 @@ class _JournalScreenState extends State<JournalScreen> {
     final recordedDays = List.generate(rangeDays, (i) => rangeStart.add(Duration(days: i))).where((d) => byDay.containsKey(_dayKey(d))).length;
 
     final topTag = _topTag(entriesInRange);
-    final insight = generateInsight(entriesInRange);
+    // Stable for the whole day per view (Tuần/Tháng) — otherwise the
+    // background refresh timer would reshuffle the sentence every 5s.
+    final insightSeed = now.year * 10000 + now.month * 100 + now.day + (isWeek ? 0 : 1);
+    final insight = generateInsight(entriesInRange, seed: insightSeed);
     final meditationMinutes = context.watch<AppState>().meditationSecondsInRange(rangeStart, rangeEnd) ~/ 60;
 
     void openDay(DateTime d) {

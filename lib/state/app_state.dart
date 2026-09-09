@@ -92,6 +92,7 @@ class AppState extends ChangeNotifier {
   Future<void> addMeditationSeconds(int seconds) async {
     if (seconds <= 0) return;
     meditationLog.add(MeditationLog(DateTime.now(), seconds));
+    debugPrint('AppState: meditationLog now has ${meditationLog.length} entries, total ${meditationLog.fold(0, (a, b) => a + b.seconds)}s');
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_kMeditationLog, meditationLog.map((m) => jsonEncode(m.toJson())).toList());

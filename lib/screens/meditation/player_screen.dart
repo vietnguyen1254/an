@@ -51,8 +51,23 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
   Duration? _duration;
   Timer? _phaseTimer;
   Timer? _tickTimer;
+  Timer? _trackTimer;
   late final AnimationController _breatheCtrl;
   late final AppState _appState;
+
+  /// How much of _elapsed has already been persisted to AppState — logging
+  /// incrementally during playback (not just once at dispose) means most of
+  /// a session survives even if the app is killed mid-play.
+  int _loggedSeconds = 0;
+
+  void _flushMeditationLog() {
+    final delta = _elapsed.inSeconds - _loggedSeconds;
+    if (delta <= 0) return;
+    _loggedSeconds = _elapsed.inSeconds;
+    final appState = _appState;
+    debugPrint('PlayerScreen: logging ${delta}s of meditation time (elapsed=${_elapsed.inSeconds}s)');
+    WidgetsBinding.instance.addPostFrameCallback((_) => appState.addMeditationSeconds(delta));
+  }
 
   int get _totalSeconds => _duration?.inSeconds ?? widget.minutes * 60;
 
@@ -64,6 +79,8 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
     _phaseTimer = Timer.periodic(const Duration(milliseconds: 4500), (_) {
       if (_playing) setState(() => _phase = (_phase + 1) % 3);
     });
+    // Persist listened time as we go, not just once when the screen closes.
+    _trackTimer = Timer.periodic(const Duration(seconds: 10), (_) => _flushMeditationLog());
 
     final url = widget.audioUrl;
     if (url != null) {
@@ -97,14 +114,10 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
 
   @override
   void dispose() {
-    // Deferred to after this frame: notifyListeners() during the pop
-    // transition (this widget being disposed) could otherwise land in an
-    // awkward point of the pipeline for listeners elsewhere in the tree.
-    final seconds = _elapsed.inSeconds;
-    final appState = _appState;
-    WidgetsBinding.instance.addPostFrameCallback((_) => appState.addMeditationSeconds(seconds));
+    _flushMeditationLog();
     _phaseTimer?.cancel();
     _tickTimer?.cancel();
+    _trackTimer?.cancel();
     _breatheCtrl.dispose();
     _positionSub?.cancel();
     _durationSub?.cancel();

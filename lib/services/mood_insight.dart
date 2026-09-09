@@ -96,12 +96,15 @@ const _encourageTemplates = [
   'Hãy thử biến thiền thành điểm dừng nhỏ giữa những điều bận rộn trong ngày.',
 ];
 
-/// Picks a random (but factually accurate) insight from [entriesInRange].
-/// When there's a real pattern in the data, returns a "Mây nhận thấy"
-/// observation built only from what's actually there. When there isn't
-/// enough data for a real observation, returns a "Mây nhắn nhủ"
-/// encouragement instead — never a vague filler mislabeled as a finding.
-MoodInsight generateInsight(List<JournalEntry> entriesInRange) {
+/// Picks a (factually accurate) insight from [entriesInRange]. [seed] makes
+/// the choice of template stable — pass the same seed (e.g. derived from
+/// today's date + which view is active) across rebuilds so the sentence
+/// doesn't reshuffle every time the screen happens to redraw, only actually
+/// changing once a day. When there's a real pattern in the data, returns a
+/// "Mây nhận thấy" observation built only from what's actually there. When
+/// there isn't enough data, returns a "Mây nhắn nhủ" encouragement instead —
+/// never a vague filler mislabeled as a finding.
+MoodInsight generateInsight(List<JournalEntry> entriesInRange, {int seed = 0}) {
   final posCount = <int, int>{};
   final negSlot = <String, int>{};
   for (final e in entriesInRange) {
@@ -127,7 +130,7 @@ MoodInsight generateInsight(List<JournalEntry> entriesInRange) {
     nTime = parts[1];
   }
 
-  final rand = Random();
+  final rand = Random(seed);
   String pick(List<String> pool) => pool[rand.nextInt(pool.length)];
 
   if (pDay != null && nDay != null) {
