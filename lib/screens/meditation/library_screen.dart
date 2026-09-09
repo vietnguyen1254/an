@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/meditation_session.dart';
@@ -7,15 +9,25 @@ import '../../state/app_state.dart';
 import '../../theme/colors.dart';
 import '../../widgets/may.dart';
 import '../premium/paywall_screen.dart';
-import 'minute_with_justin_screen.dart';
 import 'player_screen.dart';
 
-const _categories = ['Tất cả', 'Chữa lành', 'Lo âu', 'Thư giãn', 'Tích cực'];
-const _categoryKeys = [null, 'chua-lanh', 'lo-au', 'thu-gian', 'tich-cuc'];
+const _categories = ['Chữa lành', 'Lo âu', 'Thư giãn', 'Tích cực'];
+const _categoryKeys = ['chua-lanh', 'lo-au', 'thu-gian', 'tich-cuc'];
 
 const _guideNames = {'justin': 'Justin Nguyễn', 'tram': 'Trâm Nguyễn'};
 
 String _guideName(String key) => _guideNames[key] ?? key;
+
+/// Which meditation category best matches each check-in mood — used to pick
+/// the "recommended for you" session on this screen.
+const _moodCategory = {
+  Mood.binhYen: 'tich-cuc',
+  Mood.vui: 'tich-cuc',
+  Mood.binhThuong: 'tich-cuc',
+  Mood.loLang: 'lo-au',
+  Mood.buon: 'chua-lanh',
+  Mood.kietSuc: 'thu-gian',
+};
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -25,16 +37,25 @@ class LibraryScreen extends StatefulWidget {
 }
 
 class _LibraryScreenState extends State<LibraryScreen> {
-  int _categoryIndex = 0;
+  final Set<int> _selectedCategories = {};
   late Future<List<MeditationSession>> _future;
   final _searchCtrl = TextEditingController();
   String _query = '';
+  MeditationSession? _recommended;
 
   @override
   void initState() {
     super.initState();
     _future = SessionsApi.instance.fetchAll();
     _searchCtrl.addListener(() => setState(() => _query = _searchCtrl.text.trim().toLowerCase()));
+    _future.then((sessions) {
+      if (!mounted || sessions.isEmpty) return;
+      final mood = context.read<AppState>().draftMood;
+      final wantCategory = _moodCategory[mood];
+      final matches = sessions.where((s) => s.categories.contains(wantCategory)).toList();
+      final pool = matches.isNotEmpty ? matches : sessions;
+      setState(() => _recommended = pool[Random().nextInt(pool.length)]);
+    });
   }
 
   @override
@@ -110,84 +131,45 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   ],
                 ),
               ),
-              SizedBox(
-                height: 50,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 10, 22, 4),
+                child: Row(
                   children: List.generate(_categories.length, (i) {
-                    final active = i == _categoryIndex;
-                    return GestureDetector(
-                      onTap: () => setState(() => _categoryIndex = i),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        height: 34,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: active ? AppColors.ink : Colors.white,
-                          borderRadius: BorderRadius.circular(17),
-                          border: Border.all(color: active ? AppColors.ink : AppColors.ink.withValues(alpha: 0.08)),
+                    final active = _selectedCategories.contains(i);
+                    return Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(right: i == _categories.length - 1 ? 0 : 8),
+                        child: GestureDetector(
+                          onTap: () => setState(() {
+                            if (!_selectedCategories.add(i)) _selectedCategories.remove(i);
+                          }),
+                          child: Container(
+                            height: 34,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: active ? AppColors.ink : Colors.white,
+                              borderRadius: BorderRadius.circular(17),
+                              border: Border.all(color: active ? AppColors.ink : AppColors.ink.withValues(alpha: 0.08)),
+                            ),
+                            child: Text(
+                              _categories[i],
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: active ? FontWeight.w500 : FontWeight.w400, fontSize: 12.5, color: active ? Colors.white : AppColors.ink.withValues(alpha: 0.6)),
+                            ),
+                          ),
                         ),
-                        child: Text(_categories[i], style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: active ? FontWeight.w500 : FontWeight.w400, fontSize: 13, color: active ? Colors.white : AppColors.ink.withValues(alpha: 0.6))),
                       ),
                     );
                   }),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 22),
-                child: GestureDetector(
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlayerScreen(kind: PlayerKind.breathing, title: 'Thở cùng Mây', minutes: 5))),
-                  child: Container(
-                    height: 158,
-                    padding: const EdgeInsets.all(20),
-                    clipBehavior: Clip.hardEdge,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(26),
-                      gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF2E4A42), Color(0xFF16201E)]),
-                    ),
-                    child: Stack(children: [
-                      const Positioned(right: -20, top: -10, child: May(mood: Mood.binhYen, size: 110)),
-                      Align(
-                        alignment: Alignment.bottomLeft,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(width: 200, child: Text('MIỄN PHÍ · BÀI TẬP THỞ', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: Colors.white.withValues(alpha: 0.55)))),
-                            const SizedBox(height: 8),
-                            const SizedBox(width: 210, child: Text('Thở cùng Mây', style: TextStyle(fontFamily: 'Lora', fontSize: 24, color: Colors.white))),
-                            const SizedBox(height: 6),
-                            Text('5 phút · hít 4, giữ 4, thở 6', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: Colors.white.withValues(alpha: 0.6))),
-                          ],
-                        ),
-                      ),
-                    ]),
-                  ),
+              if (_recommended != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  child: _RecommendedCard(session: _recommended!, mood: context.watch<AppState>().draftMood, onTap: () => openSession(_recommended!)),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(22, 20, 22, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text('MỘT PHÚT CÙNG JUSTIN NGUYỄN', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: AppColors.ink.withValues(alpha: 0.45))),
-                    ),
-                    const SizedBox(width: 8),
-                    Text('Xem tất cả', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.45))),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
-                child: Row(children: [
-                  Expanded(child: _MinuteCard(title: 'Khi lòng mình ồn ào', meta: 'Video · 90 giây', color: const Color(0xFFE4EDF3))),
-                  const SizedBox(width: 12),
-                  Expanded(child: _MinuteCard(title: 'Một điều để nhớ', meta: 'Đọc · 1 phút', color: AppColors.lavenderTint)),
-                ]),
-              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(22, 20, 22, 0),
                 child: Text('BÀI THIỀN', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: AppColors.ink.withValues(alpha: 0.45))),
@@ -206,9 +188,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     if (snap.hasError) {
                       return Text('Không tải được danh sách bài thiền.', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 13, color: AppColors.ink.withValues(alpha: 0.5)));
                     }
-                    final key = _categoryKeys[_categoryIndex];
+                    final selectedKeys = _selectedCategories.map((i) => _categoryKeys[i]).toSet();
                     final sessions = (snap.data ?? [])
-                        .where((s) => key == null || s.category == key)
+                        .where((s) => selectedKeys.isEmpty || s.categories.any(selectedKeys.contains))
                         .where((s) => _query.isEmpty || s.title.toLowerCase().contains(_query) || _guideName(s.guide).toLowerCase().contains(_query))
                         .toList();
                     if (sessions.isEmpty) {
@@ -241,30 +223,79 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 }
 
-class _MinuteCard extends StatelessWidget {
-  final String title;
-  final String meta;
-  final Color color;
-  const _MinuteCard({required this.title, required this.meta, required this.color});
+class _RecommendedCard extends StatelessWidget {
+  final MeditationSession session;
+  final Mood mood;
+  final VoidCallback onTap;
+  const _RecommendedCard({required this.session, required this.mood, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final typeLabel = session.kind == SessionKind.breathing ? 'BÀI TẬP THỞ' : 'BÀI THIỀN DẪN';
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MinuteWithJustinScreen())),
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(height: 70, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(14))),
-            const SizedBox(height: 12),
-            Text(title, style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 14, color: AppColors.ink)),
-            const SizedBox(height: 3),
-            Text(meta, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12, color: AppColors.ink.withValues(alpha: 0.5))),
-          ],
+        height: 158,
+        padding: const EdgeInsets.all(20),
+        clipBehavior: Clip.hardEdge,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(26),
+          gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF2E4A42), Color(0xFF16201E)]),
         ),
+        child: Stack(children: [
+          Positioned(right: 10, top: 16, child: _RecommendedMay(mood: mood)),
+          Align(
+            alignment: Alignment.bottomLeft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(width: 210, child: Text('ĐỀ XUẤT CHO BẠN · $typeLabel', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: Colors.white.withValues(alpha: 0.55)))),
+                const SizedBox(height: 8),
+                SizedBox(width: 210, child: Text(session.title, style: const TextStyle(fontFamily: 'Lora', fontSize: 24, color: Colors.white))),
+                const SizedBox(height: 6),
+                Text('${_guideName(session.guide)} · ${session.minutes} phút', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: Colors.white.withValues(alpha: 0.6))),
+              ],
+            ),
+          ),
+        ]),
       ),
+    );
+  }
+}
+
+/// Mây with a slow "breathing" pulse on top of her own idle animation — sized
+/// and positioned to stay clear of the card's clipped edge so the halo never
+/// gets cut off mid-glow.
+class _RecommendedMay extends StatefulWidget {
+  final Mood mood;
+  const _RecommendedMay({required this.mood});
+
+  @override
+  State<_RecommendedMay> createState() => _RecommendedMayState();
+}
+
+class _RecommendedMayState extends State<_RecommendedMay> with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 4200))..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) => Transform.scale(scale: 0.94 + 0.12 * _pulse.value, child: child),
+      child: May(mood: widget.mood, size: 96),
     );
   }
 }

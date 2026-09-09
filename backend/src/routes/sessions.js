@@ -1,7 +1,7 @@
 import { query } from '../db.js';
 
 const COLS =
-  'id, slug, title, guide, category, kind, duration_seconds, audio_path, image_path, is_free, series_name, series_index, series_total';
+  'id, slug, title, guide, categories, kind, duration_seconds, audio_path, image_path, is_free, series_name, series_index, series_total';
 
 function toPublic(row) {
   return {
@@ -9,7 +9,7 @@ function toPublic(row) {
     slug: row.slug,
     title: row.title,
     guide: row.guide,
-    category: row.category,
+    categories: row.categories,
     kind: row.kind,
     duration_seconds: row.duration_seconds,
     audio_url: `/media/audio/${row.audio_path}`,
@@ -34,7 +34,7 @@ export default async function sessionRoutes(app) {
     }
     if (category) {
       params.push(category);
-      clauses.push(`category = $${params.length}`);
+      clauses.push(`categories @> array[$${params.length}]::text[]`);
     }
     const where = clauses.length ? `where ${clauses.join(' and ')}` : '';
     const { rows } = await query(

@@ -82,9 +82,9 @@ scp audio.m4a  root@host:/opt/an/media/audio/<slug>.m4a
 scp cover.jpg  root@host:/opt/an/media/images/<slug>.jpg   # optional
 docker compose exec db psql -U an -d an -c "
   insert into meditation_sessions
-    (slug, title, guide, category, kind, duration_seconds, audio_path, image_path, is_free)
-  values ('<slug>', '<title>', 'justin', 'lo-au', 'guided', 720, '<slug>.m4a', '<slug>.jpg', true);
-  -- category: chua-lanh | lo-au | thu-gian | tich-cuc
+    (slug, title, guide, categories, kind, duration_seconds, audio_path, image_path, is_free)
+  values ('<slug>', '<title>', 'justin', array['lo-au'], 'guided', 720, '<slug>.m4a', '<slug>.jpg', true);
+  -- categories (one or more): chua-lanh | lo-au | thu-gian | tich-cuc
 "
 ```
 

@@ -5,7 +5,7 @@ class MeditationSession {
   final String slug;
   final String title;
   final String guide;
-  final String category;
+  final List<String> categories;
   final SessionKind kind;
   final int durationSeconds;
   final String audioUrl;
@@ -20,7 +20,7 @@ class MeditationSession {
     required this.slug,
     required this.title,
     required this.guide,
-    required this.category,
+    required this.categories,
     required this.kind,
     required this.durationSeconds,
     required this.audioUrl,
@@ -37,7 +37,7 @@ class MeditationSession {
       slug: json['slug'] as String,
       title: json['title'] as String,
       guide: json['guide'] as String,
-      category: json['category'] as String,
+      categories: (json['categories'] as List<dynamic>).cast<String>(),
       kind: json['kind'] == 'breathing' ? SessionKind.breathing : SessionKind.guided,
       durationSeconds: json['duration_seconds'] as int,
       audioUrl: json['audio_url'] as String,
