@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+!.env.example
+secrets
+backups
+certbot
+.git
+.DS_Store

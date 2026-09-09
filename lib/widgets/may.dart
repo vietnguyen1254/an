@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../models/mood.dart';
 
 /// Mây — the cloud companion. Ported 1:1 from the CSS construction in
@@ -37,28 +39,59 @@ class _MoodSpec {
 
 final Map<Mood, _MoodSpec> _moods = {
   Mood.binhYen: const _MoodSpec(
-    fill: Color(0xFFFCFDFF), shade: Color(0x52B0C4D6), glow: Color(0x9EFFFFFF),
-    ink: Color(0xFF5C6E80), eyes: 'arc', mouth: 'smile',
+    fill: Color(0xFFFCFDFF),
+    shade: Color(0x52B0C4D6),
+    glow: Color(0x9EFFFFFF),
+    ink: Color(0xFF5C6E80),
+    eyes: 'arc',
+    mouth: 'smile',
   ),
   Mood.vui: const _MoodSpec(
-    fill: Color(0xFFFFFDF6), shade: Color(0x4DEECB96), glow: Color(0x99FAE2B4),
-    ink: Color(0xFF6B5B3E), eyes: 'arc', mouth: 'grin', cheeks: true, sparkly: true, sway: true,
+    fill: Color(0xFFFFFDF6),
+    shade: Color(0x4DEECB96),
+    glow: Color(0x99FAE2B4),
+    ink: Color(0xFF6B5B3E),
+    eyes: 'arc',
+    mouth: 'grin',
+    cheeks: true,
+    sparkly: true,
+    sway: true,
   ),
   Mood.binhThuong: const _MoodSpec(
-    fill: Color(0xFFFBFCFD), shade: Color(0x42B0C4D6), glow: Color(0x99FFFFFF),
-    ink: Color(0xFF6A7885), eyes: 'dot', mouth: 'line',
+    fill: Color(0xFFFBFCFD),
+    shade: Color(0x42B0C4D6),
+    glow: Color(0x99FFFFFF),
+    ink: Color(0xFF6A7885),
+    eyes: 'dot',
+    mouth: 'line',
   ),
   Mood.loLang: const _MoodSpec(
-    fill: Color(0xFFF4F2F9), shade: Color(0x579284B4), glow: Color(0x70AAA0C4),
-    ink: Color(0xFF5D5375), eyes: 'dot', mouth: 'o', brows: true, sway: true,
+    fill: Color(0xFFF4F2F9),
+    shade: Color(0x579284B4),
+    glow: Color(0x70AAA0C4),
+    ink: Color(0xFF5D5375),
+    eyes: 'dot',
+    mouth: 'o',
+    brows: true,
+    sway: true,
   ),
   Mood.buon: const _MoodSpec(
-    fill: Color(0xFFE9EFF5), shade: Color(0x6B748EAE), glow: Color(0x66889BBA),
-    ink: Color(0xFF4E617A), eyes: 'sad', mouth: 'frown', drops: 4,
+    fill: Color(0xFFE9EFF5),
+    shade: Color(0x6B748EAE),
+    glow: Color(0x66889BBA),
+    ink: Color(0xFF4E617A),
+    eyes: 'sad',
+    mouth: 'frown',
+    drops: 4,
   ),
   Mood.kietSuc: const _MoodSpec(
-    fill: Color(0xFFF0EFEB), shade: Color(0x5CA09888), glow: Color(0x52C0A894),
-    ink: Color(0xFF6E6656), eyes: 'heavy', mouth: 'flat', drops: 1,
+    fill: Color(0xFFF0EFEB),
+    shade: Color(0x5CA09888),
+    glow: Color(0x52C0A894),
+    ink: Color(0xFF6E6656),
+    eyes: 'heavy',
+    mouth: 'flat',
+    drops: 1,
   ),
 };
 
@@ -84,9 +117,18 @@ class _MayState extends State<May> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _swayCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 4500))..repeat();
-    _floatCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 7000))..repeat(reverse: true);
-    _sparkCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 3400))..repeat(reverse: true);
+    _swayCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 4500),
+    )..repeat();
+    _floatCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 7000),
+    )..repeat(reverse: true);
+    _sparkCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3400),
+    )..repeat(reverse: true);
   }
 
   @override
@@ -121,14 +163,19 @@ class _MayState extends State<May> with TickerProviderStateMixin {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  _glow(220, 190, m.glow, 0.35),
-                  _glow(160, 140, m.glow, 0.45),
+                  _glow(344, 300, m.glow, 0.46),
+                  _glow(232, 206, m.glow, 0.7),
                   if (m.sparkly) ..._sparkles(),
                   AnimatedBuilder(
                     animation: _swayCtrl,
                     builder: (context, child) {
-                      final tx = m.sway ? 3.0 * math.sin(_swayCtrl.value * 2 * math.pi) : 0.0;
-                      return Transform.translate(offset: Offset(tx, 0), child: child);
+                      final tx = m.sway
+                          ? 3.0 * math.sin(_swayCtrl.value * 2 * math.pi)
+                          : 0.0;
+                      return Transform.translate(
+                        offset: Offset(tx, 0),
+                        child: child,
+                      );
                     },
                     child: _cloudBody(m, droop),
                   ),
@@ -142,17 +189,26 @@ class _MayState extends State<May> with TickerProviderStateMixin {
     );
   }
 
+  /// A halo layer: a radial wash that fades to fully transparent at the rim,
+  /// so it blends into whatever is behind Mây with no visible edge.
   Widget _glow(double w, double h, Color color, double opacity) {
     return Positioned(
       left: (_box - w) / 2,
       top: (_box - h) / 2,
       child: IgnorePointer(
-        child: Opacity(
-          opacity: opacity,
-          child: Container(
-            width: w,
-            height: h,
-            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
+        child: Container(
+          width: w,
+          height: h,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            gradient: RadialGradient(
+              colors: [
+                color.withValues(alpha: opacity),
+                color.withValues(alpha: opacity * 0.55),
+                color.withValues(alpha: 0),
+              ],
+              stops: const [0.0, 0.55, 1.0],
+            ),
           ),
         ),
       ),
@@ -170,7 +226,11 @@ class _MayState extends State<May> with TickerProviderStateMixin {
             angle: math.pi / 4,
             child: Opacity(
               opacity: 0.15 + 0.55 * _sparkCtrl.value,
-              child: Container(width: 6, height: 6, color: const Color(0xB2F6D8A6)),
+              child: Container(
+                width: 6,
+                height: 6,
+                color: const Color(0xB2F6D8A6),
+              ),
             ),
           ),
         ),
@@ -184,7 +244,11 @@ class _MayState extends State<May> with TickerProviderStateMixin {
             angle: math.pi / 4,
             child: Opacity(
               opacity: 0.15 + 0.55 * (1 - _sparkCtrl.value),
-              child: Container(width: 5, height: 5, color: const Color(0x99F6D8A6)),
+              child: Container(
+                width: 5,
+                height: 5,
+                color: const Color(0x99F6D8A6),
+              ),
             ),
           ),
         ),
@@ -212,7 +276,10 @@ class _MayState extends State<May> with TickerProviderStateMixin {
               width: 174,
               height: 34,
               decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
+                ),
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -262,8 +329,13 @@ class _MayState extends State<May> with TickerProviderStateMixin {
             width: 16,
             height: 7,
             decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: const Color(0x99556E7A), width: 2)),
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(8)),
+              border: Border(
+                top: BorderSide(color: const Color(0x99556E7A), width: 2),
+              ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
+              ),
             ),
           ),
         ),
@@ -277,8 +349,13 @@ class _MayState extends State<May> with TickerProviderStateMixin {
             width: 16,
             height: 7,
             decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: const Color(0x99556E7A), width: 2)),
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(8)),
+              border: Border(
+                top: BorderSide(color: const Color(0x99556E7A), width: 2),
+              ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
+              ),
             ),
           ),
         ),
@@ -288,14 +365,17 @@ class _MayState extends State<May> with TickerProviderStateMixin {
 
   List<Widget> _cheeks() {
     Widget cheek(double left) => Positioned(
-          left: left,
-          top: _bwY + 76,
-          child: Container(
-            width: 15,
-            height: 9,
-            decoration: BoxDecoration(color: const Color(0x4DE8B0BE), borderRadius: BorderRadius.circular(6)),
-          ),
-        );
+      left: left,
+      top: _bwY + 76,
+      child: Container(
+        width: 15,
+        height: 9,
+        decoration: BoxDecoration(
+          color: const Color(0x4DE8B0BE),
+          borderRadius: BorderRadius.circular(6),
+        ),
+      ),
+    );
     return [cheek(_bwX + 46), cheek(_bwX + 118)];
   }
 
@@ -311,7 +391,10 @@ class _MayState extends State<May> with TickerProviderStateMixin {
             height: 8,
             decoration: BoxDecoration(
               border: Border(top: BorderSide(color: ink, width: 2)),
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(15), topRight: Radius.circular(15)),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(15),
+                topRight: Radius.circular(15),
+              ),
             ),
           ),
         ),
@@ -323,7 +406,11 @@ class _MayState extends State<May> with TickerProviderStateMixin {
         top: _bwY + 64,
         child: Opacity(
           opacity: 0.75,
-          child: Container(width: 9, height: 9, decoration: BoxDecoration(color: ink, shape: BoxShape.circle)),
+          child: Container(
+            width: 9,
+            height: 9,
+            decoration: BoxDecoration(color: ink, shape: BoxShape.circle),
+          ),
         ),
       );
     }
@@ -333,7 +420,14 @@ class _MayState extends State<May> with TickerProviderStateMixin {
         top: _bwY + 68,
         child: Opacity(
           opacity: 0.7,
-          child: Container(width: 15, height: 3, decoration: BoxDecoration(color: ink, borderRadius: BorderRadius.circular(2))),
+          child: Container(
+            width: 15,
+            height: 3,
+            decoration: BoxDecoration(
+              color: ink,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
         ),
       );
     }
@@ -342,7 +436,11 @@ class _MayState extends State<May> with TickerProviderStateMixin {
       top: _bwY + 63,
       child: Opacity(
         opacity: 0.72,
-        child: Container(width: 7, height: 7, decoration: BoxDecoration(color: ink, shape: BoxShape.circle)),
+        child: Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: ink, shape: BoxShape.circle),
+        ),
       ),
     );
   }
@@ -360,7 +458,10 @@ class _MayState extends State<May> with TickerProviderStateMixin {
             height: 10,
             decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: ink, width: 2)),
-              borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(14), bottomRight: Radius.circular(14)),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(14),
+                bottomRight: Radius.circular(14),
+              ),
             ),
           ),
         ),
@@ -377,7 +478,10 @@ class _MayState extends State<May> with TickerProviderStateMixin {
             height: 7,
             decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: ink, width: 2)),
-              borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(10), bottomRight: Radius.circular(10)),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(10),
+                bottomRight: Radius.circular(10),
+              ),
             ),
           ),
         ),
@@ -389,7 +493,14 @@ class _MayState extends State<May> with TickerProviderStateMixin {
         top: _bwY + 82,
         child: Opacity(
           opacity: 0.6,
-          child: Container(width: 13, height: 2, decoration: BoxDecoration(color: ink, borderRadius: BorderRadius.circular(2))),
+          child: Container(
+            width: 13,
+            height: 2,
+            decoration: BoxDecoration(
+              color: ink,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
         ),
       );
     }
@@ -402,7 +513,10 @@ class _MayState extends State<May> with TickerProviderStateMixin {
           child: Container(
             width: 8,
             height: 8,
-            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: ink, width: 2)),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: ink, width: 2),
+            ),
           ),
         ),
       );
@@ -418,7 +532,10 @@ class _MayState extends State<May> with TickerProviderStateMixin {
             height: 7,
             decoration: BoxDecoration(
               border: Border(top: BorderSide(color: ink, width: 2)),
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(10),
+                topRight: Radius.circular(10),
+              ),
             ),
           ),
         ),
@@ -429,7 +546,14 @@ class _MayState extends State<May> with TickerProviderStateMixin {
       top: _bwY + 84,
       child: Opacity(
         opacity: 0.5,
-        child: Container(width: 10, height: 2, decoration: BoxDecoration(color: ink, borderRadius: BorderRadius.circular(2))),
+        child: Container(
+          width: 10,
+          height: 2,
+          decoration: BoxDecoration(
+            color: ink,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
       ),
     );
   }
@@ -438,15 +562,33 @@ class _MayState extends State<May> with TickerProviderStateMixin {
     return Positioned(
       left: left,
       top: top,
-      child: Container(width: diameter, height: diameter, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+      child: Container(
+        width: diameter,
+        height: diameter,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
     );
   }
 
-  Widget _roundedRect(double left, double top, double w, double h, double r, Color color) {
+  Widget _roundedRect(
+    double left,
+    double top,
+    double w,
+    double h,
+    double r,
+    Color color,
+  ) {
     return Positioned(
       left: left,
       top: top,
-      child: Container(width: w, height: h, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(r))),
+      child: Container(
+        width: w,
+        height: h,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(r),
+        ),
+      ),
     );
   }
 
@@ -472,13 +614,17 @@ class _RainDrop extends StatefulWidget {
   State<_RainDrop> createState() => _RainDropState();
 }
 
-class _RainDropState extends State<_RainDrop> with SingleTickerProviderStateMixin {
+class _RainDropState extends State<_RainDrop>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1900));
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1900),
+    );
     Future.delayed(Duration(milliseconds: widget.index * 420), () {
       if (mounted) _ctrl.repeat();
     });
@@ -513,7 +659,10 @@ class _RainDropState extends State<_RainDrop> with SingleTickerProviderStateMixi
             child: Container(
               width: w,
               height: h,
-              decoration: BoxDecoration(color: const Color(0x9E7E98B8), borderRadius: BorderRadius.circular(w / 2)),
+              decoration: BoxDecoration(
+                color: const Color(0x9E7E98B8),
+                borderRadius: BorderRadius.circular(w / 2),
+              ),
             ),
           ),
         );

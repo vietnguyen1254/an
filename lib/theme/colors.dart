@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/mood.dart';
 
 /// "Quiet luxury" palette from the Claude Design export (An copy.dc.html).
@@ -61,9 +62,24 @@ const Map<Mood, Color> moodColors = {
 
 const Map<Mood, String> moodLabels = {
   Mood.binhYen: 'Bình yên',
-  Mood.vui: 'Vui',
+  Mood.vui: 'Vui vẻ',
   Mood.binhThuong: 'Bình thường',
-  Mood.loLang: 'Lo lắng',
+  Mood.loLang: 'Lo âu',
   Mood.buon: 'Buồn',
-  Mood.kietSuc: 'Kiệt sức',
+  Mood.kietSuc: 'Căng thẳng',
 };
+
+/// Fully opaque version of a mood accent — for bars and fills.
+Color moodSolid(Mood m) {
+  final c = moodColors[m]!;
+  return Color.fromARGB(
+    255,
+    (c.r * 255).round(),
+    (c.g * 255).round(),
+    (c.b * 255).round(),
+  );
+}
+
+/// A very light wash of the mood accent, for screen backgrounds that shift
+/// with the selected mood (e.g. Bình yên → barely-there green).
+Color moodWash(Mood m) => Color.lerp(AppColors.appBg, moodSolid(m), 0.14)!;

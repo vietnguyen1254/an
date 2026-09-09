@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Sign in with Apple.
+
+	  This file is NOT yet referenced by the Xcode project so it doesn't break
+	  simulator builds before you have a paid Apple Developer account / signing
+	  set up. To activate:
+
+	    Xcode > Runner target > Signing & Capabilities > + Capability
+	      > "Sign in with Apple"
+
+	  (that wires CODE_SIGN_ENTITLEMENTS to this file automatically), or set
+	  CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements manually in Build
+	  Settings for Debug + Release + Profile.
+	-->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
+</dict>
+</plist>

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "189257593678",
+    "project_id": "anapp-1342a",
+    "storage_bucket": "anapp-1342a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:189257593678:android:9082488b76ab9c9331241f",
+        "android_client_info": {
+          "package_name": "com.an.an"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "189257593678-bsn9ctp488502kdqvoq62pqmndqma0r4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJhm1loFUGzhfYzFL2FTBuw-6wZjMYehU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "189257593678-bsn9ctp488502kdqvoq62pqmndqma0r4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

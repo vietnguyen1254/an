@@ -1,0 +1,9 @@
+# secrets & runtime state — never commit
+.env
+.env.prod
+secrets/
+backups/
+certbot/
+node_modules/
+*.log
+.DS_Store

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SSO placeholders — replace the TODO_* values. See AUTH_SETUP.md. -->
+<resources>
+    <string name="app_name">An</string>
+    <string name="facebook_app_id">TODO_FACEBOOK_APP_ID</string>
+    <string name="facebook_client_token">TODO_FACEBOOK_CLIENT_TOKEN</string>
+    <string name="fb_login_protocol_scheme">fbTODO_FACEBOOK_APP_ID</string>
+</resources>

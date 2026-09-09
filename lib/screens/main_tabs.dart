@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
-import '../widgets/tab_icons.dart';
 import 'home/home_screen.dart';
 import 'journal/journal_screen.dart';
 import 'meditation/library_screen.dart';
@@ -17,7 +16,7 @@ class _MainTabsState extends State<MainTabs> {
   int _index = 0;
 
   static const _screens = [HomeScreen(), JournalScreen(), LibraryScreen(), ProfileScreen()];
-  static const _labels = ['Trời', 'Cảm xúc', 'Thiền', 'Bạn'];
+  static const _labels = ['Cảm xúc', 'Lịch sử', 'Thiền/Thở', 'Bạn'];
 
   @override
   Widget build(BuildContext context) {
@@ -66,15 +65,16 @@ class _MainTabsState extends State<MainTabs> {
   }
 
   Widget _iconFor(int i, bool focused) {
-    switch (i) {
-      case 0:
-        return SkyIcon(focused: focused);
-      case 1:
-        return HeartIcon(focused: focused);
-      case 2:
-        return MeditationIcon(focused: focused);
-      default:
-        return ProfileIcon(focused: focused);
-    }
+    const icons = [
+      Icons.favorite_rounded, // Cảm xúc
+      Icons.history_rounded, // Lịch sử
+      Icons.self_improvement_rounded, // Thiền/Thở
+      Icons.person_rounded, // Bạn
+    ];
+    return Icon(
+      icons[i],
+      size: 23,
+      color: focused ? AppColors.sage : AppColors.ink.withValues(alpha: 0.4),
+    );
   }
 }

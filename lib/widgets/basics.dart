@@ -1,6 +1,46 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 
+/// Slow ease-in-out "breathing" pulse — gently scales its child up and back,
+/// forever. [amplitude] is how much bigger it gets at the peak (0.12 = +12%).
+class Breathing extends StatefulWidget {
+  final Widget child;
+  final double amplitude;
+  final Duration period;
+  const Breathing({
+    super.key,
+    required this.child,
+    this.amplitude = 0.12,
+    this.period = const Duration(milliseconds: 4200),
+  });
+
+  @override
+  State<Breathing> createState() => _BreathingState();
+}
+
+class _BreathingState extends State<Breathing>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: widget.period,
+  )..repeat(reverse: true);
+
+  late final Animation<double> _scale = Tween<double>(
+    begin: 1.0,
+    end: 1.0 + widget.amplitude,
+  ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      ScaleTransition(scale: _scale, child: widget.child);
+}
+
 class ToggleDot extends StatelessWidget {
   final bool on;
   const ToggleDot({super.key, required this.on});

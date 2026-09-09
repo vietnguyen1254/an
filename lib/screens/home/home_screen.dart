@@ -5,11 +5,11 @@ import '../../state/app_state.dart';
 import '../../theme/colors.dart';
 import '../../utils/vn_date.dart';
 import '../../widgets/app_button.dart';
+import '../../widgets/basics.dart';
 import '../../widgets/may.dart';
 import '../checkin/mood_checkin_screen.dart';
 import '../meditation/minute_with_justin_screen.dart';
 import '../meditation/player_screen.dart';
-import '../sky/streaks_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -34,57 +34,14 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(formatVietnameseDate(), style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: AppColors.ink.withValues(alpha: 0.5))),
-                      const SizedBox(height: 4),
-                      Text(
-                        isFirstDay ? 'Chào bạn, ${state.userName}' : '${greetingForHour()}, ${state.userName}',
-                        style: const TextStyle(fontFamily: 'Lora', fontSize: 25, height: 32 / 25, color: AppColors.ink),
-                      ),
-                    ],
-                    ),
-                  ),
-                  if (!isFirstDay)
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StreaksScreen())),
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.7),
-                          border: Border.all(color: AppColors.ink.withValues(alpha: 0.07)),
-                        ),
-                        child: Text('${state.streakDays}', style: const TextStyle(fontFamily: 'BeVietnamPro', fontSize: 13, color: AppColors.sage)),
-                      ),
-                    ),
-                ],
-              ),
-              SizedBox(
-                height: 260,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Positioned(
-                      bottom: 24,
-                      child: Container(width: 260, height: 74, decoration: BoxDecoration(borderRadius: BorderRadius.circular(60), color: Colors.white.withValues(alpha: 0.35))),
-                    ),
-                    Positioned(
-                      top: 20,
-                      child: Container(width: 170, height: 54, decoration: BoxDecoration(borderRadius: BorderRadius.circular(40), color: Colors.white.withValues(alpha: 0.4))),
-                    ),
-                    May(mood: isFirstDay ? Mood.binhThuong : Mood.binhYen, size: 150),
-                  ],
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  isFirstDay ? 'Chào bạn, ${state.userName}' : '${greetingForHour()}, ${state.userName}',
+                  style: const TextStyle(fontFamily: 'Lora', fontSize: 25, height: 32 / 25, color: AppColors.ink),
                 ),
               ),
+              _MayStage(mood: isFirstDay ? Mood.binhThuong : Mood.binhYen),
               Container(
                 padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
@@ -121,23 +78,23 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _QuickCard(
-                      title: 'Thở 3 phút',
-                      sub: isFirstDay ? 'cùng Mây' : 'Trước cuộc họp',
+                      title: 'Bài thở 2 phút',
+                      sub: isFirstDay ? 'cùng Mây' : 'Thư giãn nhanh',
                       color: AppColors.sageTint,
                       borderColor: AppColors.sage.withValues(alpha: 0.3),
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlayerScreen(kind: PlayerKind.breathing, title: 'Thở cùng Mây', minutes: 3))),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlayerScreen(kind: PlayerKind.breathing, title: 'Thở cùng Mây', minutes: 2))),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _QuickCard(
-                      title: isFirstDay ? 'Góc nhìn' : 'Nghỉ trưa',
-                      sub: isFirstDay ? 'Justin Nguyễn' : '10 phút',
+                      title: isFirstDay ? 'Góc nhìn' : 'Thiền nhanh 5 phút',
+                      sub: isFirstDay ? 'Justin Nguyễn' : 'Yêu đời, bình an',
                       color: AppColors.lavenderTint,
                       borderColor: AppColors.lavender.withValues(alpha: 0.35),
                       onTap: () => isFirstDay
                           ? Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MinuteWithJustinScreen()))
-                          : Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlayerScreen(kind: PlayerKind.breathing, title: 'Nghỉ trưa', minutes: 10))),
+                          : Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlayerScreen(kind: PlayerKind.breathing, title: 'Thiền nhanh', minutes: 5))),
                     ),
                   ),
                 ],
@@ -215,6 +172,94 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Mây floating on the sky: a soft radial glow, a few blurred cloud wisps
+/// scattered around, and Mây centred. Full-width so Mây sits dead centre.
+class _MayStage extends StatelessWidget {
+  final Mood mood;
+  const _MayStage({required this.mood});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 250,
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          // radial glow behind Mây
+          Container(
+            width: 300,
+            height: 300,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  Colors.white.withValues(alpha: 0.55),
+                  Colors.white.withValues(alpha: 0.0),
+                ],
+                stops: const [0.0, 0.72],
+              ),
+            ),
+          ),
+          // left wisp
+          const Positioned(
+            left: 26,
+            top: 150,
+            child: _Wisp(width: 46),
+          ),
+          // bottom-right wisp
+          const Positioned(
+            right: 34,
+            bottom: 30,
+            child: _Wisp(width: 70),
+          ),
+          // little dot to the right
+          Positioned(
+            right: 66,
+            top: 118,
+            child: Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.65),
+              ),
+            ),
+          ),
+          Breathing(child: May(mood: mood, size: 150)),
+        ],
+      ),
+    );
+  }
+}
+
+/// A soft horizontal cloud wisp — a thin bar bloomed out by a white shadow,
+/// so it reads as a blurred puff with no hard edge.
+class _Wisp extends StatelessWidget {
+  final double width;
+  const _Wisp({required this.width});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: 5,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(3),
+        color: Colors.white.withValues(alpha: 0.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.5),
+            blurRadius: 16,
+            spreadRadius: 7,
+          ),
+        ],
       ),
     );
   }

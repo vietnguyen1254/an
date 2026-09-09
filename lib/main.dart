@@ -1,20 +1,43 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import 'firebase_options.dart';
 import 'screens/onboarding/onboarding_screen.dart';
+import 'services/auth_service.dart';
 import 'state/app_state.dart';
 import 'theme/colors.dart';
 
-void main() {
-  runApp(const AnApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Firebase backs all three SSO providers. It only initialises once the
+  // native config files are in place (GoogleService-Info.plist /
+  // google-services.json) — until then the app still runs and the login
+  // screen shows a "not configured" message. See AUTH_SETUP.md.
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    AuthService.available = true;
+  } catch (e) {
+    debugPrint('Firebase not configured yet: $e');
+  }
+
+  final appState = AppState();
+  await appState.loadSession();
+
+  runApp(AnApp(appState: appState));
 }
 
 class AnApp extends StatelessWidget {
-  const AnApp({super.key});
+  final AppState appState;
+  const AnApp({super.key, required this.appState});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AppState(),
+    return ChangeNotifierProvider.value(
+      value: appState,
       child: MaterialApp(
         title: 'An — Thiền và chữa lành',
         debugShowCheckedModeBanner: false,
