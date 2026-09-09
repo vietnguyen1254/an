@@ -27,11 +27,20 @@ class LibraryScreen extends StatefulWidget {
 class _LibraryScreenState extends State<LibraryScreen> {
   int _categoryIndex = 0;
   late Future<List<MeditationSession>> _future;
+  final _searchCtrl = TextEditingController();
+  String _query = '';
 
   @override
   void initState() {
     super.initState();
     _future = SessionsApi.instance.fetchAll();
+    _searchCtrl.addListener(() => setState(() => _query = _searchCtrl.text.trim().toLowerCase()));
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -70,14 +79,33 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Thiền', style: TextStyle(fontFamily: 'Lora', fontSize: 27, color: AppColors.ink)),
+                    const Text('Thiền và Thở', style: TextStyle(fontFamily: 'Lora', fontSize: 27, color: AppColors.ink)),
                     const SizedBox(height: 16),
                     Container(
                       height: 44,
                       padding: const EdgeInsets.symmetric(horizontal: 18),
-                      alignment: Alignment.centerLeft,
                       decoration: BoxDecoration(color: AppColors.ink.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(22)),
-                      child: Text('Tìm bài thiền, chủ đề…', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 14, color: AppColors.ink.withValues(alpha: 0.4))),
+                      child: Row(children: [
+                        Icon(Icons.search_rounded, size: 19, color: AppColors.ink.withValues(alpha: 0.35)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchCtrl,
+                            style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w400, fontSize: 14, color: AppColors.ink),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              border: InputBorder.none,
+                              hintText: 'Tìm bài thiền, chủ đề…',
+                              hintStyle: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 14, color: AppColors.ink.withValues(alpha: 0.4)),
+                            ),
+                          ),
+                        ),
+                        if (_query.isNotEmpty)
+                          GestureDetector(
+                            onTap: () => _searchCtrl.clear(),
+                            child: Icon(Icons.close_rounded, size: 18, color: AppColors.ink.withValues(alpha: 0.35)),
+                          ),
+                      ]),
                     ),
                   ],
                 ),
@@ -179,9 +207,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       return Text('Không tải được danh sách bài thiền.', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 13, color: AppColors.ink.withValues(alpha: 0.5)));
                     }
                     final key = _categoryKeys[_categoryIndex];
-                    final sessions = (snap.data ?? []).where((s) => key == null || s.category == key).toList();
+                    final sessions = (snap.data ?? [])
+                        .where((s) => key == null || s.category == key)
+                        .where((s) => _query.isEmpty || s.title.toLowerCase().contains(_query) || _guideName(s.guide).toLowerCase().contains(_query))
+                        .toList();
                     if (sessions.isEmpty) {
-                      return Text('Chưa có bài nào ở mục này.', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13.5, color: AppColors.ink.withValues(alpha: 0.45)));
+                      final msg = _query.isNotEmpty ? 'Không tìm thấy bài nào cho "$_query".' : 'Chưa có bài nào ở mục này.';
+                      return Text(msg, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13.5, color: AppColors.ink.withValues(alpha: 0.45)));
                     }
                     return Column(
                       children: [

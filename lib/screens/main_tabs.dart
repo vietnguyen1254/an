@@ -66,7 +66,7 @@ class _MainTabsState extends State<MainTabs> {
 
   Widget _iconFor(int i, bool focused) {
     const icons = [
-      Icons.favorite_rounded, // Cảm xúc
+      Icons.cloud_rounded, // Cảm xúc — Mây
       Icons.history_rounded, // Lịch sử
       Icons.self_improvement_rounded, // Thiền/Thở
       Icons.person_rounded, // Bạn
