@@ -73,6 +73,7 @@ services:
       - ./nginx/an.conf.template:/etc/nginx/templates/an.conf.template:ro
       - certbot-etc:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
+      - ./media:/var/www/media:ro
     environment:
       DOMAIN: ${DOMAIN}
     networks: [edge]

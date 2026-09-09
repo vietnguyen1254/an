@@ -8,6 +8,7 @@ import { firebaseReady, firebaseStatus } from './firebase.js';
 import authRoutes from './routes/auth.js';
 import meRoutes from './routes/me.js';
 import entryRoutes from './routes/entries.js';
+import sessionRoutes from './routes/sessions.js';
 
 const PORT = Number(process.env.PORT ?? 8080);
 
@@ -61,6 +62,7 @@ app.get('/healthz', async () => {
 await app.register(authRoutes);
 await app.register(meRoutes);
 await app.register(entryRoutes);
+await app.register(sessionRoutes);
 
 const close = async (signal) => {
   app.log.info(`${signal} received, shutting down`);

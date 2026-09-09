@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/meditation_session.dart';
 import '../../models/mood.dart';
+import '../../services/sessions_api.dart';
 import '../../state/app_state.dart';
 import '../../theme/colors.dart';
 import '../../widgets/may.dart';
@@ -9,20 +11,49 @@ import 'minute_with_justin_screen.dart';
 import 'player_screen.dart';
 
 const _categories = ['Tất cả', 'Lo lắng', 'Ngủ', 'Tập trung'];
+const _categoryKeys = [null, 'lo-lang', 'ngu', 'tap-trung'];
 
-class LibraryScreen extends StatelessWidget {
+const _guideNames = {'justin': 'Justin Nguyễn', 'tram': 'Trâm Nguyễn'};
+
+String _guideName(String key) => _guideNames[key] ?? key;
+
+class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
+
+  @override
+  State<LibraryScreen> createState() => _LibraryScreenState();
+}
+
+class _LibraryScreenState extends State<LibraryScreen> {
+  int _categoryIndex = 0;
+  late Future<List<MeditationSession>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = SessionsApi.instance.fetchAll();
+  }
 
   @override
   Widget build(BuildContext context) {
     final isPremium = context.watch<AppState>().plan != PlanTier.free;
 
-    void openGuided(String title, String guide, {required bool free}) {
-      if (!free && !isPremium) {
+    void openSession(MeditationSession s) {
+      if (!s.isFree && !isPremium) {
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PaywallScreen()));
-      } else {
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => PlayerScreen(kind: PlayerKind.guided, title: title, guide: guide, minutes: 12)));
+        return;
       }
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => PlayerScreen(
+          kind: s.kind == SessionKind.breathing ? PlayerKind.breathing : PlayerKind.guided,
+          title: s.title,
+          guide: _guideName(s.guide),
+          minutes: s.minutes,
+          audioUrl: SessionsApi.instance.resolve(s.audioUrl),
+          imageUrl: s.imageUrl != null ? SessionsApi.instance.resolve(s.imageUrl!) : null,
+          seriesLabel: s.seriesName != null ? 'Chuỗi "${s.seriesName}" · bài ${s.seriesIndex} / ${s.seriesTotal}' : null,
+        ),
+      ));
     }
 
     return Container(
@@ -57,18 +88,21 @@ class LibraryScreen extends StatelessWidget {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
                   children: List.generate(_categories.length, (i) {
-                    final active = i == 0;
-                    return Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      height: 34,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: active ? AppColors.ink : Colors.white,
-                        borderRadius: BorderRadius.circular(17),
-                        border: Border.all(color: active ? AppColors.ink : AppColors.ink.withValues(alpha: 0.08)),
+                    final active = i == _categoryIndex;
+                    return GestureDetector(
+                      onTap: () => setState(() => _categoryIndex = i),
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        height: 34,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: active ? AppColors.ink : Colors.white,
+                          borderRadius: BorderRadius.circular(17),
+                          border: Border.all(color: active ? AppColors.ink : AppColors.ink.withValues(alpha: 0.08)),
+                        ),
+                        child: Text(_categories[i], style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: active ? FontWeight.w500 : FontWeight.w400, fontSize: 13, color: active ? Colors.white : AppColors.ink.withValues(alpha: 0.6))),
                       ),
-                      child: Text(_categories[i], style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: active ? FontWeight.w500 : FontWeight.w400, fontSize: 13, color: active ? Colors.white : AppColors.ink.withValues(alpha: 0.6))),
                     );
                   }),
                 ),
@@ -128,27 +162,43 @@ class LibraryScreen extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(22, 20, 22, 0),
-                child: Text('KHI BẠN LO LẮNG', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: AppColors.ink.withValues(alpha: 0.45))),
+                child: Text('BÀI THIỀN', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: AppColors.ink.withValues(alpha: 0.45))),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
-                child: Column(children: [
-                  _ListMeditationCard(
-                    title: 'Buông một ngày dài',
-                    meta: 'Thiền dẫn · Justin Nguyễn · 12 phút',
-                    color: AppColors.sageTint,
-                    free: true,
-                    onTap: () => openGuided('Buông một ngày dài', 'Justin Nguyễn', free: true),
-                  ),
-                  const SizedBox(height: 10),
-                  _ListMeditationCard(
-                    title: 'Quét cơ thể',
-                    meta: 'Thiền dẫn · Trâm Nguyễn · 15 phút',
-                    color: AppColors.lavenderTint,
-                    free: false,
-                    onTap: () => openGuided('Quét cơ thể', 'Trâm Nguyễn', free: false),
-                  ),
-                ]),
+                child: FutureBuilder<List<MeditationSession>>(
+                  future: _future,
+                  builder: (context, snap) {
+                    if (snap.connectionState != ConnectionState.done) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      );
+                    }
+                    if (snap.hasError) {
+                      return Text('Không tải được danh sách bài thiền.', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 13, color: AppColors.ink.withValues(alpha: 0.5)));
+                    }
+                    final key = _categoryKeys[_categoryIndex];
+                    final sessions = (snap.data ?? []).where((s) => key == null || s.category == key).toList();
+                    if (sessions.isEmpty) {
+                      return Text('Chưa có bài nào ở mục này.', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13.5, color: AppColors.ink.withValues(alpha: 0.45)));
+                    }
+                    return Column(
+                      children: [
+                        for (final s in sessions) ...[
+                          _ListMeditationCard(
+                            title: s.title,
+                            meta: 'Thiền dẫn · ${_guideName(s.guide)} · ${s.minutes} phút',
+                            color: s.guide == 'justin' ? AppColors.sageTint : AppColors.lavenderTint,
+                            free: s.isFree,
+                            onTap: () => openSession(s),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                      ],
+                    );
+                  },
+                ),
               ),
             ],
           ),

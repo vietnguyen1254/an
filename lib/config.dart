@@ -14,12 +14,11 @@ class AppConfig {
   AppConfig._();
 
   /// Base URL of the An backend. The client sends the Firebase ID token here
-  /// after every successful sign-in (see [AuthApi]). Points at a placeholder
-  /// until the real backend is live — calls fail quietly so the app still
-  /// works offline in the meantime.
+  /// after every successful sign-in (see [AuthApi]). Override with
+  /// --dart-define=AN_API_BASE_URL=... to point at a different environment.
   static const apiBaseUrl = String.fromEnvironment(
     'AN_API_BASE_URL',
-    defaultValue: 'https://api.example.com',
+    defaultValue: 'https://api.justin.vn',
   );
 
   /// Google "Web application" OAuth client ID. Used as the `serverClientId`

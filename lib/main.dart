@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
@@ -23,6 +24,14 @@ Future<void> main() async {
   } catch (e) {
     debugPrint('Firebase not configured yet: $e');
   }
+
+  // Must run before any AudioPlayer is created — wires up lock-screen /
+  // notification playback controls for meditation & breathing sessions.
+  await JustAudioBackground.init(
+    androidNotificationChannelId: 'com.an.an.audio',
+    androidNotificationChannelName: 'An — Thiền và thở',
+    androidNotificationOngoing: true,
+  );
 
   final appState = AppState();
   await appState.loadSession();

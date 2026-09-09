@@ -46,6 +46,13 @@ server {
         root /var/www/certbot;
     }
 
+    # meditation/breathing audio + cover art — content is added by hand on
+    # the server (see backend/README.md), served directly, no app involved.
+    location /media/ {
+        alias /var/www/media/;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+
     location / {
         limit_req zone=api burst=40 nodelay;
         proxy_pass http://api:8080;

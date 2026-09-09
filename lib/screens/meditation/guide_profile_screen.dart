@@ -1,61 +1,76 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/meditation_session.dart';
+import '../../services/sessions_api.dart';
 import '../../state/app_state.dart';
 import '../../theme/colors.dart';
 import '../premium/paywall_screen.dart';
 import 'player_screen.dart';
 
-class _Track {
-  final String title;
-  final String meta;
-  final bool free;
-  const _Track(this.title, this.meta, this.free);
-}
-
-class _Guide {
+class _GuideInfo {
   final String name;
   final String bio;
-  final List<(String, String)> stats;
-  final List<_Track> tracks;
+  final String photoAsset;
   final String coDrive;
   final String coDriveLabel;
-  const _Guide({required this.name, required this.bio, required this.stats, required this.tracks, required this.coDrive, required this.coDriveLabel});
+  const _GuideInfo({required this.name, required this.bio, required this.photoAsset, required this.coDrive, required this.coDriveLabel});
 }
 
 const _guides = {
-  'justin': _Guide(
+  'justin': _GuideInfo(
     name: 'Justin Nguyễn',
     bio: 'Justin dẫn thiền và nói về chữa lành từ năm 2019. Giọng chậm, ít chỉ dẫn, nhiều khoảng lặng — dành cho người vừa hết một ngày dài.',
-    stats: [('42', 'bài thiền'), ('6', 'chuỗi bài'), ('18', 'góc nhìn')],
-    tracks: [_Track('Buông một ngày dài', '12 phút', true), _Track('Trở về hơi thở', '12 phút · chuỗi "Trở về"', false)],
+    photoAsset: 'assets/guides/justin.jpg',
     coDrive: 'tram',
     coDriveLabel: 'Trâm Nguyễn',
   ),
-  'tram': _Guide(
+  'tram': _GuideInfo(
     name: 'Trâm Nguyễn',
     bio: 'Trâm cùng chồng — Justin — dẫn thiền cho An. Giọng nữ nhẹ, ấm, thường dẫn các bài về giấc ngủ và quét cơ thể.',
-    stats: [('15', 'bài thiền'), ('2', 'chuỗi bài'), ('4', 'góc nhìn')],
-    tracks: [_Track('Quét cơ thể', '15 phút', false)],
+    photoAsset: 'assets/guides/tram.jpg',
     coDrive: 'justin',
     coDriveLabel: 'Justin Nguyễn',
   ),
 };
 
-class GuideProfileScreen extends StatelessWidget {
+class GuideProfileScreen extends StatefulWidget {
   final String guide;
   const GuideProfileScreen({super.key, this.guide = 'justin'});
 
   @override
+  State<GuideProfileScreen> createState() => _GuideProfileScreenState();
+}
+
+class _GuideProfileScreenState extends State<GuideProfileScreen> {
+  late Future<List<MeditationSession>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = SessionsApi.instance.fetchAll(guide: widget.guide);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final g = _guides[guide]!;
+    final g = _guides[widget.guide]!;
     final isPremium = context.watch<AppState>().plan != PlanTier.free;
 
-    void openTrack(_Track t) {
-      if (!t.free && !isPremium) {
+    void openTrack(MeditationSession s) {
+      if (!s.isFree && !isPremium) {
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PaywallScreen()));
-      } else {
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => PlayerScreen(kind: PlayerKind.guided, title: t.title, guide: g.name, minutes: 12)));
+        return;
       }
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => PlayerScreen(
+          kind: s.kind == SessionKind.breathing ? PlayerKind.breathing : PlayerKind.guided,
+          title: s.title,
+          guide: g.name,
+          minutes: s.minutes,
+          audioUrl: SessionsApi.instance.resolve(s.audioUrl),
+          imageUrl: s.imageUrl != null ? SessionsApi.instance.resolve(s.imageUrl!) : null,
+          seriesLabel: s.seriesName != null ? 'Chuỗi "${s.seriesName}" · bài ${s.seriesIndex} / ${s.seriesTotal}' : null,
+        ),
+      ));
     }
 
     return Scaffold(
@@ -69,20 +84,20 @@ class GuideProfileScreen extends StatelessWidget {
               SizedBox(
                 height: 300,
                 child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Container(color: const Color(0xFFDCE6EC)),
+                    Image.asset(g.photoAsset, fit: BoxFit.cover),
                     Positioned(
                       left: 24,
                       top: 74,
                       child: GestureDetector(
                         onTap: () => Navigator.of(context).pop(),
-                        child: Text('Quay lại', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 14, color: AppColors.ink.withValues(alpha: 0.5))),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(14)),
+                          child: const Text('Quay lại', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 14, color: Colors.white)),
+                        ),
                       ),
-                    ),
-                    Positioned(
-                      left: 24,
-                      bottom: 24,
-                      child: Text('ảnh chân dung người dẫn', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 10.5, color: AppColors.ink.withValues(alpha: 0.4))),
                     ),
                   ],
                 ),
@@ -99,58 +114,84 @@ class GuideProfileScreen extends StatelessWidget {
                     const SizedBox(height: 14),
                     Text(g.bio, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 14.5, height: 26 / 14.5, color: AppColors.ink.withValues(alpha: 0.7))),
                     const SizedBox(height: 22),
-                    Row(
-                      children: g.stats
-                          .map((s) => Padding(
-                                padding: const EdgeInsets.only(right: 24),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(s.$1, style: const TextStyle(fontFamily: 'Lora', fontSize: 22, color: AppColors.ink)),
-                                    const SizedBox(height: 2),
-                                    Text(s.$2, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12, color: AppColors.ink.withValues(alpha: 0.5))),
-                                  ],
-                                ),
-                              ))
-                          .toList(),
+                    FutureBuilder<List<MeditationSession>>(
+                      future: _future,
+                      builder: (context, snap) {
+                        final sessions = snap.data ?? const [];
+                        return Row(children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('${sessions.length}', style: const TextStyle(fontFamily: 'Lora', fontSize: 22, color: AppColors.ink)),
+                                const SizedBox(height: 2),
+                                Text('bài thiền', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12, color: AppColors.ink.withValues(alpha: 0.5))),
+                              ],
+                            ),
+                          ),
+                        ]);
+                      },
                     ),
                     const SizedBox(height: 28),
                     Text('BÀI THIỀN CỦA ${g.name.split(' ').first.toUpperCase()}', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 10.5, letterSpacing: 1, color: AppColors.ink.withValues(alpha: 0.45))),
                     const SizedBox(height: 12),
-                    ...g.tracks.map((t) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: GestureDetector(
-                            onTap: () => openTrack(t),
-                            child: Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
-                              child: Row(children: [
-                                Container(width: 52, height: 52, decoration: BoxDecoration(color: t.free ? AppColors.sageTint : AppColors.lavenderTint, borderRadius: BorderRadius.circular(15))),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(t.title, style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.ink)),
-                                      const SizedBox(height: 3),
-                                      Text(t.meta, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.5))),
-                                    ],
-                                  ),
-                                ),
-                                if (t.free)
-                                  Container(
-                                    height: 26,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(color: AppColors.sageTint, borderRadius: BorderRadius.circular(13)),
-                                    child: const Text('Miễn phí', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 11, color: AppColors.sageTintText)),
-                                  )
-                                else
-                                  Container(width: 26, height: 26, decoration: BoxDecoration(color: AppColors.ink.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(13))),
-                              ]),
-                            ),
-                          ),
-                        )),
+                    FutureBuilder<List<MeditationSession>>(
+                      future: _future,
+                      builder: (context, snap) {
+                        if (snap.connectionState != ConnectionState.done) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                          );
+                        }
+                        if (snap.hasError) {
+                          return Text('Không tải được danh sách bài thiền.', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 13, color: AppColors.ink.withValues(alpha: 0.5)));
+                        }
+                        final tracks = snap.data ?? const [];
+                        if (tracks.isEmpty) {
+                          return Text('Chưa có bài nào.', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13.5, color: AppColors.ink.withValues(alpha: 0.45)));
+                        }
+                        return Column(
+                          children: tracks
+                              .map((t) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: GestureDetector(
+                                      onTap: () => openTrack(t),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(14),
+                                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
+                                        child: Row(children: [
+                                          Container(width: 52, height: 52, decoration: BoxDecoration(color: t.isFree ? AppColors.sageTint : AppColors.lavenderTint, borderRadius: BorderRadius.circular(15))),
+                                          const SizedBox(width: 14),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(t.title, style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.ink)),
+                                                const SizedBox(height: 3),
+                                                Text('${t.minutes} phút', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.5))),
+                                              ],
+                                            ),
+                                          ),
+                                          if (t.isFree)
+                                            Container(
+                                              height: 26,
+                                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                                              alignment: Alignment.center,
+                                              decoration: BoxDecoration(color: AppColors.sageTint, borderRadius: BorderRadius.circular(13)),
+                                              child: const Text('Miễn phí', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 11, color: AppColors.sageTintText)),
+                                            )
+                                          else
+                                            Container(width: 26, height: 26, decoration: BoxDecoration(color: AppColors.ink.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(13))),
+                                        ]),
+                                      ),
+                                    ),
+                                  ))
+                              .toList(),
+                        );
+                      },
+                    ),
                     GestureDetector(
                       onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GuideProfileScreen(guide: g.coDrive))),
                       child: Container(
@@ -158,7 +199,7 @@ class GuideProfileScreen extends StatelessWidget {
                         margin: const EdgeInsets.only(top: 22),
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
                         child: Row(children: [
-                          Container(width: 44, height: 44, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFFDFE7EC))),
+                          ClipOval(child: Image.asset(_guides[g.coDrive]!.photoAsset, width: 44, height: 44, fit: BoxFit.cover)),
                           const SizedBox(width: 14),
                           Expanded(
                             child: Column(

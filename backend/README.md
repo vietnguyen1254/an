@@ -23,6 +23,7 @@ mobile app ──HTTPS──▶ nginx ──▶ api (Fastify) ──▶ postgres
 | PATCH | `/v1/entries/:id` | app JWT | update entry |
 | DELETE | `/v1/entries/:id` | app JWT | delete entry |
 | GET | `/v1/streak` | app JWT | consecutive-day streak |
+| GET | `/v1/sessions?guide=&category=` | — | meditation/breathing catalog |
 | GET | `/healthz` | — | `{ok, db, firebase}` |
 
 App JWT: `Authorization: Bearer <token>` from `/v1/auth/session` (30-day TTL).
@@ -70,6 +71,26 @@ Restore into a scratch DB to verify:
 gunzip -c backups/daily/an-YYYYMMDD-HHMMSS.sql.gz | \
   docker compose exec -T db psql -U an -d an
 ```
+
+## Meditation/breathing content
+
+No admin UI or upload endpoint — content is added by hand, directly on the
+server, since only two people (Justin/Trâm) publish it:
+
+```bash
+scp audio.m4a  root@host:/opt/an/media/audio/<slug>.m4a
+scp cover.jpg  root@host:/opt/an/media/images/<slug>.jpg   # optional
+docker compose exec db psql -U an -d an -c "
+  insert into meditation_sessions
+    (slug, title, guide, category, kind, duration_seconds, audio_path, image_path, is_free)
+  values ('<slug>', '<title>', 'justin', 'lo-lang', 'guided', 720, '<slug>.m4a', '<slug>.jpg', true);
+"
+```
+
+`/opt/an/media/{audio,images}/` is bind-mounted read-only into nginx and
+served at `/media/...` with a 1-year cache header (files are immutable —
+publish a new slug rather than overwriting one). No restart needed; new rows
+show up on the next `GET /v1/sessions`.
 
 ## Client wiring
 
