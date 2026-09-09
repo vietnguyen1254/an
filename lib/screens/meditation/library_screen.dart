@@ -58,7 +58,9 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
   }
 
   void _loadSessions() {
-    setState(() => _future = SessionsApi.instance.fetchAll());
+    setState(() {
+      _future = SessionsApi.instance.fetchAll();
+    });
     _future.then((sessions) {
       if (!mounted) return;
       final mood = context.read<AppState>().draftMood;
