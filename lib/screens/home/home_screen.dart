@@ -219,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ]),
                               const SizedBox(height: 5),
-                              Text(_recommended!.title, style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.ink)),
+                              Text(_recommended!.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.ink)),
                               const SizedBox(height: 3),
                               Text('Thiền dẫn · ${guideName(_recommended!.guide)} · ${_recommended!.minutes} phút', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.5))),
                             ],

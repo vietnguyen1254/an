@@ -22,7 +22,7 @@ class LibraryScreen extends StatefulWidget {
   State<LibraryScreen> createState() => _LibraryScreenState();
 }
 
-class _LibraryScreenState extends State<LibraryScreen> {
+class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserver {
   final Set<int> _selectedCategories = {};
   late Future<List<MeditationSession>> _future;
   final _searchCtrl = TextEditingController();
@@ -36,8 +36,29 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   void initState() {
     super.initState();
-    _future = SessionsApi.instance.fetchAll();
+    WidgetsBinding.instance.addObserver(this);
     _searchCtrl.addListener(() => setState(() => _query = _searchCtrl.text.trim().toLowerCase()));
+    _loadSessions();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Reopening the app (from background, not just a cold launch) should
+    // pick up any content added meanwhile — this screen's State otherwise
+    // stays alive (kept by MainTabs' IndexedStack) with whatever it fetched
+    // once at launch.
+    if (state == AppLifecycleState.resumed) _loadSessions();
+  }
+
+  void _loadSessions() {
+    setState(() => _future = SessionsApi.instance.fetchAll());
     _future.then((sessions) {
       if (!mounted) return;
       final mood = context.read<AppState>().draftMood;
@@ -45,12 +66,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }).catchError((Object e) {
       debugPrint('LibraryScreen: failed to load recommendation: $e');
     });
-  }
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
   }
 
   @override
@@ -221,7 +236,6 @@ class _RecommendedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final typeLabel = session.kind == SessionKind.breathing ? 'BÀI TẬP THỞ' : 'BÀI THIỀN DẪN';
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -242,11 +256,14 @@ class _RecommendedCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(width: 210, child: Text('ĐỀ XUẤT CHO BẠN · $typeLabel', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: Colors.white.withValues(alpha: 0.55)))),
+                  SizedBox(width: 210, child: Text('ĐỀ XUẤT CHO BẠN', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: Colors.white.withValues(alpha: 0.55)))),
                   const SizedBox(height: 8),
-                  SizedBox(width: 210, child: Text(session.title, style: const TextStyle(fontFamily: 'Lora', fontSize: 24, color: Colors.white))),
+                  SizedBox(
+                    width: 210,
+                    child: Text(session.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: 'Lora', fontSize: 20, height: 1.15, color: Colors.white)),
+                  ),
                   const SizedBox(height: 6),
-                  Text('${guideName(session.guide)} · ${session.minutes} phút', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: Colors.white.withValues(alpha: 0.6))),
+                  Text('${guideName(session.guide)} · ${session.minutes} phút', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: Colors.white.withValues(alpha: 0.6))),
                 ],
               ),
             ),
