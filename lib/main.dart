@@ -4,6 +4,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
+import 'screens/main_tabs.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'services/auth_service.dart';
 import 'state/app_state.dart';
@@ -56,7 +57,7 @@ class AnApp extends StatelessWidget {
           scaffoldBackgroundColor: AppColors.appBg,
           colorScheme: ColorScheme.fromSeed(seedColor: AppColors.sage),
         ),
-        home: const OnboardingScreen(),
+        home: appState.isLoggedIn ? const MainTabs() : const OnboardingScreen(),
       ),
     );
   }
