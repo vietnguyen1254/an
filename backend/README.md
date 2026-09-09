@@ -83,7 +83,8 @@ scp cover.jpg  root@host:/opt/an/media/images/<slug>.jpg   # optional
 docker compose exec db psql -U an -d an -c "
   insert into meditation_sessions
     (slug, title, guide, category, kind, duration_seconds, audio_path, image_path, is_free)
-  values ('<slug>', '<title>', 'justin', 'lo-lang', 'guided', 720, '<slug>.m4a', '<slug>.jpg', true);
+  values ('<slug>', '<title>', 'justin', 'lo-au', 'guided', 720, '<slug>.m4a', '<slug>.jpg', true);
+  -- category: chua-lanh | lo-au | thu-gian | tich-cuc
 "
 ```
 

@@ -10,8 +10,8 @@ import '../premium/paywall_screen.dart';
 import 'minute_with_justin_screen.dart';
 import 'player_screen.dart';
 
-const _categories = ['Tất cả', 'Lo lắng', 'Ngủ', 'Tập trung'];
-const _categoryKeys = [null, 'lo-lang', 'ngu', 'tap-trung'];
+const _categories = ['Tất cả', 'Chữa lành', 'Lo âu', 'Thư giãn', 'Tích cực'];
+const _categoryKeys = [null, 'chua-lanh', 'lo-au', 'thu-gian', 'tich-cuc'];
 
 const _guideNames = {'justin': 'Justin Nguyễn', 'tram': 'Trâm Nguyễn'};
 
@@ -190,6 +190,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             title: s.title,
                             meta: 'Thiền dẫn · ${_guideName(s.guide)} · ${s.minutes} phút',
                             color: s.guide == 'justin' ? AppColors.sageTint : AppColors.lavenderTint,
+                            imageUrl: s.imageUrl != null ? SessionsApi.instance.resolve(s.imageUrl!) : null,
                             free: s.isFree,
                             onTap: () => openSession(s),
                           ),
@@ -240,9 +241,10 @@ class _ListMeditationCard extends StatelessWidget {
   final String title;
   final String meta;
   final Color color;
+  final String? imageUrl;
   final bool free;
   final VoidCallback onTap;
-  const _ListMeditationCard({required this.title, required this.meta, required this.color, required this.free, required this.onTap});
+  const _ListMeditationCard({required this.title, required this.meta, required this.color, this.imageUrl, required this.free, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -252,7 +254,13 @@ class _ListMeditationCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
         child: Row(children: [
-          Container(width: 56, height: 56, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(16))),
+          Container(
+            width: 56,
+            height: 56,
+            clipBehavior: Clip.hardEdge,
+            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(16)),
+            child: imageUrl != null ? Image.network(imageUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink()) : null,
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(

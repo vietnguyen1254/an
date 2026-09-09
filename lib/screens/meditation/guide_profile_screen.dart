@@ -162,7 +162,15 @@ class _GuideProfileScreenState extends State<GuideProfileScreen> {
                                         padding: const EdgeInsets.all(14),
                                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
                                         child: Row(children: [
-                                          Container(width: 52, height: 52, decoration: BoxDecoration(color: t.isFree ? AppColors.sageTint : AppColors.lavenderTint, borderRadius: BorderRadius.circular(15))),
+                                          Container(
+                                            width: 52,
+                                            height: 52,
+                                            clipBehavior: Clip.hardEdge,
+                                            decoration: BoxDecoration(color: t.isFree ? AppColors.sageTint : AppColors.lavenderTint, borderRadius: BorderRadius.circular(15)),
+                                            child: t.imageUrl != null
+                                                ? Image.network(SessionsApi.instance.resolve(t.imageUrl!), fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink())
+                                                : null,
+                                          ),
                                           const SizedBox(width: 14),
                                           Expanded(
                                             child: Column(
