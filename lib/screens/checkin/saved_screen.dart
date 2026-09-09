@@ -28,7 +28,10 @@ class _SavedScreenState extends State<SavedScreen> {
   void initState() {
     super.initState();
     final state = context.read<AppState>();
-    _message = generateStreakMessage(state.draftMood, state.streakDays);
+    final tagLabel = state.draftTags.isNotEmpty
+        ? kTags.firstWhere((t) => t.key == state.draftTags.first, orElse: () => TagDef(state.draftTags.first, state.draftTags.first)).label
+        : null;
+    _message = generateStreakMessage(state.draftMood, state.streakDays, tagLabel: tagLabel);
     SessionsApi.instance.fetchAll().then((sessions) {
       if (!mounted) return;
       setState(() => _recommended = pickRecommendation(sessions, state.draftMood));

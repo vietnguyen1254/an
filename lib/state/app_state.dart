@@ -60,8 +60,31 @@ String intensityLabel(int i) {
 
 class AppState extends ChangeNotifier {
   bool hasOnboarded = false;
-  int streakDays = 12;
   PlanTier plan = PlanTier.free;
+
+  /// Consecutive days (ending today or yesterday) with a recorded entry —
+  /// computed from real data, not a counter. Mirrors the backend's own
+  /// GET /v1/streak logic so the two never disagree.
+  int get streakDays {
+    final days = entries.map((e) => DateTime(e.entryDate.year, e.entryDate.month, e.entryDate.day)).toSet().toList()
+      ..sort((a, b) => b.compareTo(a));
+    if (days.isEmpty) return 0;
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final yesterday = todayDate.subtract(const Duration(days: 1));
+    if (days.first != todayDate && days.first != yesterday) return 0;
+    var streak = 0;
+    var cursor = days.first;
+    for (final d in days) {
+      if (d == cursor) {
+        streak++;
+        cursor = cursor.subtract(const Duration(days: 1));
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
 
   // --- auth ---------------------------------------------------------------
   String? authUid;
@@ -302,7 +325,6 @@ class AppState extends ChangeNotifier {
       entries[existingIndex] = entry;
     } else {
       entries.insert(0, entry);
-      streakDays += 1;
     }
     notifyListeners();
 

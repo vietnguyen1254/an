@@ -106,6 +106,86 @@ const _byMood = {
   ],
 };
 
+// Same 6 mood pools, but weaving in the topic/tag the user actually picked
+// during check-in ({tag}, e.g. "công việc", "gia đình" — always lowercase,
+// so every template places it mid-sentence, never as the opening word).
+// Used whenever a tag is available; _byMood above is the fallback when the
+// user picked none.
+const _byMoodAndTag = {
+  Mood.binhYen: [
+    'Chuyện {tag} dạo này có vẻ ổn, và hôm nay bạn thấy bình yên. {streak} ngày rồi, cảm ơn bạn đã kể cho Mây nghe.',
+    'Bình yên hôm nay, dù {tag} vẫn đang chiếm một phần tâm trí bạn. {streak} ngày rồi đấy.',
+    'Mây mừng vì {tag} không làm bạn mất đi sự bình yên hôm nay. {streak} ngày ghi lại rồi.',
+    'Giữa những lo toan về {tag}, hôm nay bạn vẫn tìm được bình yên. {streak} ngày rồi, thật đáng quý.',
+    'Có vẻ {tag} đang ổn, và điều đó giúp bạn bình yên hơn. {streak} ngày liên tục rồi.',
+    'Bình yên hôm nay, kể cả khi {tag} vẫn ở đó. {streak} ngày rồi, cảm ơn bạn đã kể cho Mây nghe.',
+    'Mây thấy bạn đang cân bằng tốt với {tag}. {streak} ngày rồi, cứ giữ nhịp này nhé.',
+    'Dù {tag} vẫn cần bạn quan tâm, hôm nay lòng bạn vẫn nhẹ nhàng. {streak} ngày rồi đấy.',
+    '{streak} ngày rồi, và hôm nay chuyện {tag} không làm bạn xao động. Thật tốt.',
+    'Bình yên trước cả {tag} — hôm nay bạn đang làm rất tốt. {streak} ngày liên tục rồi.',
+  ],
+  Mood.vui: [
+    'Chuyện {tag} dạo này có vẻ mang lại niềm vui cho bạn. {streak} ngày rồi, Mây mừng lây.',
+    'Vui vẻ hôm nay, có lẽ nhờ {tag} đang suôn sẻ. {streak} ngày ghi lại rồi đấy.',
+    'Mây thấy {tag} đang làm bạn mỉm cười hôm nay. {streak} ngày liên tục rồi!',
+    'Niềm vui từ {tag} hôm nay thật đáng ghi lại. {streak} ngày rồi, cứ giữ nhịp này nhé.',
+    'Có vẻ {tag} đang mang năng lượng tốt đến cho bạn. {streak} ngày rồi đấy.',
+    'Vui vì {tag} hôm nay — Mây cũng vui lây. {streak} ngày ghi lại rồi.',
+    '{tag} dạo này có vẻ ổn, và niềm vui của bạn cũng vậy. {streak} ngày liên tục rồi.',
+    'Cảm ơn bạn đã chia sẻ niềm vui về {tag} hôm nay. {streak} ngày rồi đấy.',
+    '{streak} ngày rồi, và hôm nay {tag} khiến bạn thấy nhẹ nhõm, vui vẻ. Thật tuyệt.',
+    'Mây ghi lại nụ cười của bạn hôm nay, có cả {tag} góp phần. {streak} ngày rồi.',
+  ],
+  Mood.binhThuong: [
+    'Chuyện {tag} dạo này vẫn bình thường, và điều đó cũng ổn. {streak} ngày rồi, cảm ơn bạn.',
+    'Không có gì đặc biệt với {tag} hôm nay, nhưng bạn vẫn ghé kể cho Mây. {streak} ngày rồi đấy.',
+    '{tag} dạo này đều đều, giống như cảm xúc hôm nay của bạn. {streak} ngày liên tục rồi.',
+    'Bình thường với {tag} hôm nay — đôi khi vậy cũng là điều tốt. {streak} ngày rồi.',
+    'Mây trân trọng cả những ngày {tag} không có gì nổi bật. {streak} ngày ghi lại rồi.',
+    'Chuyện {tag} vẫn vậy, và bạn vẫn ổn. {streak} ngày rồi, cảm ơn bạn đã kể cho Mây nghe.',
+    '{streak} ngày rồi, và hôm nay {tag} không làm xáo trộn gì nhiều. Ổn định cũng tốt.',
+    'Đều đặn với {tag} như hôm nay cũng đáng được ghi lại. {streak} ngày rồi đấy.',
+    'Không vui không buồn với {tag} hôm nay, và điều đó không sao cả. {streak} ngày liên tục rồi.',
+    'Mây thích sự đều đặn của bạn, kể cả khi {tag} chỉ bình bình thôi. {streak} ngày rồi.',
+  ],
+  Mood.loLang: [
+    'Chuyện {tag} dạo này có vẻ đang khiến bạn lo lắng. {streak} ngày rồi, Mây ở đây lắng nghe.',
+    'Lo âu vì {tag} không sao cả — cảm ơn bạn đã kể thật với Mây. {streak} ngày liên tục rồi.',
+    'Mây nhận thấy {tag} đang chiếm khá nhiều tâm trí bạn hôm nay. {streak} ngày rồi, cứ từ từ thôi.',
+    '{tag} dạo này có vẻ nặng, và bạn đang lo lắng. {streak} ngày rồi, bạn không đơn độc đâu.',
+    'Lo lắng về {tag} rồi cũng sẽ dịu lại. {streak} ngày ghi lại rồi, cảm ơn bạn.',
+    'Cảm ơn bạn đã kể Mây nghe chuyện {tag}, dù nó đang làm bạn lo. {streak} ngày rồi đấy.',
+    '{tag} không dễ đâu, Mây hiểu. {streak} ngày liên tục rồi, cứ hít thở chậm lại một chút nhé.',
+    'Lo âu vì {tag} hôm nay cũng xứng đáng được ghi lại. {streak} ngày rồi, Mây luôn ở đây.',
+    'Thử một bài thở ngắn có thể giúp bạn nhẹ lòng hơn về {tag}. {streak} ngày ghi lại rồi đấy.',
+    '{streak} ngày rồi, và hôm nay {tag} khiến lòng bạn không yên. Cảm ơn vì đã kể cho Mây nghe.',
+  ],
+  Mood.buon: [
+    'Chuyện {tag} dạo này có vẻ làm bạn buồn. {streak} ngày rồi, Mây ở đây cùng bạn.',
+    'Buồn vì {tag} cũng cần được lắng nghe. Cảm ơn bạn vì {streak} ngày đã tin tưởng Mây.',
+    'Mây nhận thấy {tag} đang làm lòng bạn nặng trĩu hôm nay. {streak} ngày liên tục rồi.',
+    '{tag} không dễ dàng, và nỗi buồn hôm nay của bạn là thật. {streak} ngày rồi, Mây vẫn ở đây.',
+    'Nỗi buồn về {tag} hôm nay cũng đáng được ghi nhận. {streak} ngày bền bỉ rồi.',
+    'Cảm ơn bạn đã kể Mây nghe chuyện {tag}, dù lòng đang buồn. {streak} ngày rồi đấy.',
+    '{tag} rồi cũng sẽ ổn hơn. {streak} ngày ghi lại rồi, bạn không phải một mình.',
+    'Mây ở đây, dù {tag} đang khiến hôm nay không dễ dàng. {streak} ngày liên tục rồi.',
+    'Ghi lại nỗi buồn về {tag} cũng là một cách chăm sóc bản thân. {streak} ngày rồi.',
+    '{streak} ngày rồi, và hôm nay {tag} khiến lòng bạn buồn. Cảm ơn vì đã kể cho Mây nghe.',
+  ],
+  Mood.kietSuc: [
+    'Chuyện {tag} dạo này có vẻ đang vắt kiệt sức bạn. {streak} ngày rồi, cảm ơn bạn đã kể cho Mây nghe.',
+    'Mệt mỏi vì {tag} là dấu hiệu bạn cần nghỉ ngơi. {streak} ngày liên tục ghi lại rồi đấy.',
+    'Mây nhận thấy {tag} đang khiến hôm nay khá căng thẳng. {streak} ngày rồi, cho mình một chút nghỉ ngơi nhé.',
+    '{tag} dạo này nặng thật, và cơ thể bạn đang nhắc bạn chậm lại. {streak} ngày rồi.',
+    'Kiệt sức vì {tag} không sao cả — nghỉ ngơi cũng là một phần hành trình. {streak} ngày rồi.',
+    'Cảm ơn bạn đã kể Mây nghe chuyện {tag}, dù cơ thể đang mệt nhoài. {streak} ngày bền bỉ rồi.',
+    '{tag} đang lấy đi khá nhiều năng lượng của bạn. {streak} ngày liên tục rồi, hãy nghỉ một chút nhé.',
+    'Một chút thời gian tĩnh lặng có thể giúp bạn hồi phục sau {tag}. {streak} ngày ghi lại rồi.',
+    'Thử một bài thở ngắn có thể giúp bạn lấy lại sức sau {tag}. {streak} ngày ghi lại rồi đấy.',
+    '{streak} ngày rồi, và hôm nay {tag} khiến bạn kiệt sức. Cảm ơn vì đã kể cho Mây nghe.',
+  ],
+};
+
 const _milestones = {
   1: [
     'Ngày đầu tiên của bạn ở đây. Cảm ơn vì đã bắt đầu — Mây rất vui được đồng hành cùng bạn.',
@@ -141,11 +221,19 @@ const _milestones = {
   ],
 };
 
-String generateStreakMessage(Mood mood, int streak) {
+/// [tagLabel] is the topic the user picked during check-in (e.g. "Công
+/// việc") — pass null if they picked none. When present, prefers the
+/// tag-aware pool so the line actually reflects what they said affected
+/// them today, not just their mood in the abstract.
+String generateStreakMessage(Mood mood, int streak, {String? tagLabel}) {
   final rand = Random();
   final milestonePool = _milestones[streak];
   if (milestonePool != null) {
     return milestonePool[rand.nextInt(milestonePool.length)];
+  }
+  if (tagLabel != null && tagLabel.isNotEmpty) {
+    final pool = _byMoodAndTag[mood]!;
+    return pool[rand.nextInt(pool.length)].replaceAll('{streak}', '$streak').replaceAll('{tag}', tagLabel.toLowerCase());
   }
   final pool = _byMood[mood]!;
   return pool[rand.nextInt(pool.length)].replaceAll('{streak}', '$streak');
