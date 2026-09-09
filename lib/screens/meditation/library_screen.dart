@@ -191,8 +191,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         for (final s in sessions) ...[
                           _ListMeditationCard(
                             title: s.title,
-                            meta: 'Thiền dẫn · ${guideName(s.guide)}',
-                            duration: '${s.minutes} phút',
+                            typeDuration: '${s.kind == SessionKind.breathing ? "Bài thở" : "Bài thiền"} · ${s.minutes} phút',
+                            guideLine: 'Hướng dẫn bởi ${guideName(s.guide)}',
                             color: s.guide == 'justin' ? AppColors.sageTint : AppColors.lavenderTint,
                             imageUrl: s.imageUrl != null ? SessionsApi.instance.resolve(s.imageUrl!) : null,
                             free: s.isFree,
@@ -295,13 +295,13 @@ class _RecommendedMayState extends State<_RecommendedMay> with SingleTickerProvi
 
 class _ListMeditationCard extends StatelessWidget {
   final String title;
-  final String meta;
-  final String duration;
+  final String typeDuration;
+  final String guideLine;
   final Color color;
   final String? imageUrl;
   final bool free;
   final VoidCallback onTap;
-  const _ListMeditationCard({required this.title, required this.meta, required this.duration, required this.color, this.imageUrl, required this.free, required this.onTap});
+  const _ListMeditationCard({required this.title, required this.typeDuration, required this.guideLine, required this.color, this.imageUrl, required this.free, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -325,9 +325,9 @@ class _ListMeditationCard extends StatelessWidget {
               children: [
                 Text(title, style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.ink)),
                 const SizedBox(height: 3),
-                Text(meta, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.5))),
+                Text(typeDuration, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.5))),
                 const SizedBox(height: 2),
-                Text(duration, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.5))),
+                Text(guideLine, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.5))),
               ],
             ),
           ),

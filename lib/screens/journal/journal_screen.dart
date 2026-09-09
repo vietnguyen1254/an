@@ -55,6 +55,7 @@ class JournalScreen extends StatefulWidget {
 class _JournalScreenState extends State<JournalScreen> {
   int _tab = 0; // 0 = Tuần, 1 = Tháng
   int _offset = 0; // periods back from the current one; 0 = current, never > 0
+  double _dragAccum = 0;
 
   void _shift(int delta) {
     setState(() => _offset = (_offset + delta).clamp(-9999, 0));
@@ -131,49 +132,51 @@ class _JournalScreenState extends State<JournalScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _NavArrow(icon: Icons.chevron_left_rounded, onTap: () => _shift(-1)),
-                        Expanded(
-                          child: Column(
-                            children: [
-                              Text(_rangeHeaderLabel(isWeek, rangeStart, rangeEnd), style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.ink)),
-                              const SizedBox(height: 2),
-                              Text('$recordedDays / $rangeDays ngày', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.45))),
-                            ],
+              GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onHorizontalDragUpdate: (details) => _dragAccum += details.delta.dx,
+                onHorizontalDragEnd: (details) {
+                  if (_dragAccum <= -30) {
+                    _shift(1);
+                  } else if (_dragAccum >= 30) {
+                    _shift(-1);
+                  }
+                  _dragAccum = 0;
+                },
+                onHorizontalDragCancel: () => _dragAccum = 0,
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _NavArrow(icon: Icons.chevron_left_rounded, onTap: () => _shift(-1)),
+                          Expanded(
+                            child: Column(
+                              children: [
+                                Text(_rangeHeaderLabel(isWeek, rangeStart, rangeEnd), style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.ink)),
+                                const SizedBox(height: 2),
+                                Text('$recordedDays / $rangeDays ngày', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.45))),
+                              ],
+                            ),
                           ),
-                        ),
-                        _NavArrow(icon: Icons.chevron_right_rounded, onTap: canGoForward ? () => _shift(1) : null),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onHorizontalDragEnd: (details) {
-                        final v = details.primaryVelocity ?? 0;
-                        if (v < -200) {
-                          _shift(1);
-                        } else if (v > 200) {
-                          _shift(-1);
-                        }
-                      },
-                      child: isWeek
+                          _NavArrow(icon: Icons.chevron_right_rounded, onTap: canGoForward ? () => _shift(1) : null),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      isWeek
                           ? _WeekGrid(start: rangeStart, byDay: byDay, onTapDay: openDay)
                           : _MonthGrid(start: rangeStart, days: rangeDays, byDay: byDay, onTapDay: openDay),
-                    ),
-                    const SizedBox(height: 18),
-                    Wrap(spacing: 14, runSpacing: 8, children: [
-                      for (final m in moodOrder) _Legend(color: moodColors[m]!, label: moodLabels[m]!),
-                      const _Legend(color: _emptyDayColor, label: 'Chưa ghi'),
-                    ]),
-                  ],
+                      const SizedBox(height: 18),
+                      Wrap(spacing: 14, runSpacing: 8, children: [
+                        for (final m in moodOrder) _Legend(color: moodColors[m]!, label: moodLabels[m]!),
+                        const _Legend(color: _emptyDayColor, label: 'Chưa ghi'),
+                      ]),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
