@@ -1,9 +1,8 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/meditation_session.dart';
 import '../../models/mood.dart';
+import '../../services/meditation_recommend.dart';
 import '../../services/sessions_api.dart';
 import '../../state/app_state.dart';
 import '../../theme/colors.dart';
@@ -13,21 +12,6 @@ import 'player_screen.dart';
 
 const _categories = ['Chữa lành', 'Lo âu', 'Thư giãn', 'Tích cực'];
 const _categoryKeys = ['chua-lanh', 'lo-au', 'thu-gian', 'tich-cuc'];
-
-const _guideNames = {'justin': 'Justin Nguyễn', 'tram': 'Trâm Nguyễn'};
-
-String _guideName(String key) => _guideNames[key] ?? key;
-
-/// Which meditation category best matches each check-in mood — used to pick
-/// the "recommended for you" session on this screen.
-const _moodCategory = {
-  Mood.binhYen: 'tich-cuc',
-  Mood.vui: 'tich-cuc',
-  Mood.binhThuong: 'tich-cuc',
-  Mood.loLang: 'lo-au',
-  Mood.buon: 'chua-lanh',
-  Mood.kietSuc: 'thu-gian',
-};
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -49,12 +33,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
     _future = SessionsApi.instance.fetchAll();
     _searchCtrl.addListener(() => setState(() => _query = _searchCtrl.text.trim().toLowerCase()));
     _future.then((sessions) {
-      if (!mounted || sessions.isEmpty) return;
+      if (!mounted) return;
       final mood = context.read<AppState>().draftMood;
-      final wantCategory = _moodCategory[mood];
-      final matches = sessions.where((s) => s.categories.contains(wantCategory)).toList();
-      final pool = matches.isNotEmpty ? matches : sessions;
-      setState(() => _recommended = pool[Random().nextInt(pool.length)]);
+      setState(() => _recommended = pickRecommendation(sessions, mood));
     });
   }
 
@@ -77,7 +58,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         builder: (_) => PlayerScreen(
           kind: s.kind == SessionKind.breathing ? PlayerKind.breathing : PlayerKind.guided,
           title: s.title,
-          guide: _guideName(s.guide),
+          guide: guideName(s.guide),
           minutes: s.minutes,
           audioUrl: SessionsApi.instance.resolve(s.audioUrl),
           imageUrl: s.imageUrl != null ? SessionsApi.instance.resolve(s.imageUrl!) : null,
@@ -191,7 +172,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     final selectedKeys = _selectedCategories.map((i) => _categoryKeys[i]).toSet();
                     final sessions = (snap.data ?? [])
                         .where((s) => selectedKeys.isEmpty || s.categories.any(selectedKeys.contains))
-                        .where((s) => _query.isEmpty || s.title.toLowerCase().contains(_query) || _guideName(s.guide).toLowerCase().contains(_query))
+                        .where((s) => _query.isEmpty || s.title.toLowerCase().contains(_query) || guideName(s.guide).toLowerCase().contains(_query))
                         .toList();
                     if (sessions.isEmpty) {
                       final msg = _query.isNotEmpty ? 'Không tìm thấy bài nào cho "$_query".' : 'Chưa có bài nào ở mục này.';
@@ -202,7 +183,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         for (final s in sessions) ...[
                           _ListMeditationCard(
                             title: s.title,
-                            meta: 'Thiền dẫn · ${_guideName(s.guide)} · ${s.minutes} phút',
+                            meta: 'Thiền dẫn · ${guideName(s.guide)} · ${s.minutes} phút',
                             color: s.guide == 'justin' ? AppColors.sageTint : AppColors.lavenderTint,
                             imageUrl: s.imageUrl != null ? SessionsApi.instance.resolve(s.imageUrl!) : null,
                             free: s.isFree,
@@ -256,7 +237,7 @@ class _RecommendedCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   SizedBox(width: 210, child: Text(session.title, style: const TextStyle(fontFamily: 'Lora', fontSize: 24, color: Colors.white))),
                   const SizedBox(height: 6),
-                  Text('${_guideName(session.guide)} · ${session.minutes} phút', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: Colors.white.withValues(alpha: 0.6))),
+                  Text('${guideName(session.guide)} · ${session.minutes} phút', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: Colors.white.withValues(alpha: 0.6))),
                 ],
               ),
             ),

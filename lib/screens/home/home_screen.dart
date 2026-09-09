@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/meditation_session.dart';
 import '../../models/mood.dart';
+import '../../services/meditation_recommend.dart';
+import '../../services/sessions_api.dart';
 import '../../state/app_state.dart';
 import '../../theme/colors.dart';
 import '../../utils/vn_date.dart';
@@ -10,14 +13,54 @@ import '../../widgets/may.dart';
 import '../checkin/mood_checkin_screen.dart';
 import '../meditation/minute_with_justin_screen.dart';
 import '../meditation/player_screen.dart';
+import '../premium/paywall_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  MeditationSession? _recommended;
+
+  @override
+  void initState() {
+    super.initState();
+    final entries = context.read<AppState>().entries;
+    if (entries.isNotEmpty) {
+      SessionsApi.instance.fetchAll().then((sessions) {
+        if (!mounted) return;
+        setState(() => _recommended = pickRecommendation(sessions, entries.first.mood));
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final isFirstDay = state.entries.isEmpty;
+    final isPremium = state.plan != PlanTier.free;
+
+    void openRecommended() {
+      final s = _recommended;
+      if (s == null) return;
+      if (!s.isFree && !isPremium) {
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PaywallScreen()));
+        return;
+      }
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => PlayerScreen(
+          kind: s.kind == SessionKind.breathing ? PlayerKind.breathing : PlayerKind.guided,
+          title: s.title,
+          guide: guideName(s.guide),
+          minutes: s.minutes,
+          audioUrl: SessionsApi.instance.resolve(s.audioUrl),
+          imageUrl: s.imageUrl != null ? SessionsApi.instance.resolve(s.imageUrl!) : null,
+        ),
+      ));
+    }
 
     return Container(
       decoration: const BoxDecoration(
@@ -99,12 +142,10 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              if (!isFirstDay) ...[
+              if (_recommended != null) ...[
                 const SizedBox(height: 14),
                 GestureDetector(
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => const PlayerScreen(kind: PlayerKind.guided, title: 'Trở về hơi thở', guide: 'Justin Nguyễn', minutes: 12),
-                  )),
+                  onTap: openRecommended,
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -114,7 +155,15 @@ class HomeScreen extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        Container(width: 56, height: 56, decoration: BoxDecoration(color: AppColors.sageTint, borderRadius: BorderRadius.circular(16))),
+                        Container(
+                          width: 56,
+                          height: 56,
+                          clipBehavior: Clip.hardEdge,
+                          decoration: BoxDecoration(color: AppColors.sageTint, borderRadius: BorderRadius.circular(16)),
+                          child: _recommended!.imageUrl != null
+                              ? Image.network(SessionsApi.instance.resolve(_recommended!.imageUrl!), fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink())
+                              : null,
+                        ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
@@ -130,40 +179,16 @@ class HomeScreen extends StatelessWidget {
                                   padding: const EdgeInsets.symmetric(horizontal: 7),
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(color: AppColors.sageTint, borderRadius: BorderRadius.circular(9)),
-                                  child: const Text('PREMIUM', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 9.5, letterSpacing: 0.5, color: AppColors.sageTintText)),
+                                  child: Text(_recommended!.isFree ? 'MIỄN PHÍ' : 'PREMIUM', style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 9.5, letterSpacing: 0.5, color: AppColors.sageTintText)),
                                 ),
                               ]),
                               const SizedBox(height: 5),
-                              const Text('Trở về hơi thở', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.ink)),
+                              Text(_recommended!.title, style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.ink)),
                               const SizedBox(height: 3),
-                              Text('Thiền dẫn · Justin Nguyễn · 12 phút', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.5))),
+                              Text('Thiền dẫn · ${guideName(_recommended!.guide)} · ${_recommended!.minutes} phút', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.5))),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                GestureDetector(
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MinuteWithJustinScreen())),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.62), borderRadius: BorderRadius.circular(24)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('GÓC NHÌN HÔM NAY', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 10.5, letterSpacing: 1, color: AppColors.ink.withValues(alpha: 0.45))),
-                        const SizedBox(height: 10),
-                        const Text('Bình an không phải là hết việc. Là bạn thôi chống lại ngày hôm nay.', style: TextStyle(fontFamily: 'Lora', fontSize: 19, height: 29.5 / 19, color: AppColors.ink)),
-                        const SizedBox(height: 14),
-                        Row(children: [
-                          Container(width: 28, height: 28, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFFDFE7EC))),
-                          const SizedBox(width: 10),
-                          Flexible(
-                            child: Text('Justin Nguyễn · 1 phút đọc', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.55))),
-                          ),
-                        ]),
                       ],
                     ),
                   ),
