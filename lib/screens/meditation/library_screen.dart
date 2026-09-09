@@ -167,7 +167,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ),
               if (_recommended != null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  padding: const EdgeInsets.fromLTRB(22, 18, 22, 0),
                   child: _RecommendedCard(session: _recommended!, mood: context.watch<AppState>().draftMood, onTap: () => openSession(_recommended!)),
                 ),
               Padding(
@@ -246,16 +246,19 @@ class _RecommendedCard extends StatelessWidget {
           Positioned(right: 10, top: 16, child: _RecommendedMay(mood: mood)),
           Align(
             alignment: Alignment.bottomLeft,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(width: 210, child: Text('ĐỀ XUẤT CHO BẠN · $typeLabel', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: Colors.white.withValues(alpha: 0.55)))),
-                const SizedBox(height: 8),
-                SizedBox(width: 210, child: Text(session.title, style: const TextStyle(fontFamily: 'Lora', fontSize: 24, color: Colors.white))),
-                const SizedBox(height: 6),
-                Text('${_guideName(session.guide)} · ${session.minutes} phút', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: Colors.white.withValues(alpha: 0.6))),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(width: 210, child: Text('ĐỀ XUẤT CHO BẠN · $typeLabel', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: Colors.white.withValues(alpha: 0.55)))),
+                  const SizedBox(height: 8),
+                  SizedBox(width: 210, child: Text(session.title, style: const TextStyle(fontFamily: 'Lora', fontSize: 24, color: Colors.white))),
+                  const SizedBox(height: 6),
+                  Text('${_guideName(session.guide)} · ${session.minutes} phút', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: Colors.white.withValues(alpha: 0.6))),
+                ],
+              ),
             ),
           ),
         ]),

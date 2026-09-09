@@ -15,8 +15,8 @@ class MainTabs extends StatefulWidget {
 class _MainTabsState extends State<MainTabs> {
   int _index = 0;
 
-  static const _screens = [HomeScreen(), JournalScreen(), LibraryScreen(), ProfileScreen()];
-  static const _labels = ['Cảm xúc', 'Lịch sử', 'Thiền/Thở', 'Bạn'];
+  static const _screens = [HomeScreen(), LibraryScreen(), JournalScreen(), ProfileScreen()];
+  static const _labels = ['Cảm xúc', 'Thiền/Thở', 'Lịch sử', 'Bạn'];
 
   @override
   Widget build(BuildContext context) {
@@ -67,8 +67,8 @@ class _MainTabsState extends State<MainTabs> {
   Widget _iconFor(int i, bool focused) {
     const icons = [
       Icons.cloud_rounded, // Cảm xúc — Mây
-      Icons.history_rounded, // Lịch sử
       Icons.self_improvement_rounded, // Thiền/Thở
+      Icons.history_rounded, // Lịch sử
       Icons.person_rounded, // Bạn
     ];
     return Icon(
