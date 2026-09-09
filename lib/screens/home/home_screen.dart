@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/meditation_session.dart';
@@ -15,6 +17,33 @@ import '../meditation/minute_with_justin_screen.dart';
 import '../meditation/player_screen.dart';
 import '../premium/paywall_screen.dart';
 
+class _Prompt {
+  final String question;
+  final String description;
+  const _Prompt(this.question, this.description);
+}
+
+// Kept short on purpose — these sit in a fixed-width card, a long line
+// wraps awkwardly or pushes the button off-balance. Goal always stays the
+// same regardless of phrasing: get the user to tap through and record.
+List<_Prompt> _homePrompts(String greeting) => [
+      const _Prompt('Hôm nay bạn thế nào?', 'Mây đang chờ bạn kể. Chỉ mất mười giây thôi.'),
+      const _Prompt('Lúc này bạn cảm thấy ra sao?', 'Ghi lại một chút, để Mây hiểu bạn hơn.'),
+      const _Prompt('Hôm nay có gì trong lòng bạn?', 'Một vài giây thôi, Mây luôn sẵn sàng lắng nghe.'),
+      const _Prompt('Bạn đang cảm thấy thế nào?', 'Ghi lại cảm xúc giúp bạn hiểu chính mình hơn mỗi ngày.'),
+      const _Prompt('Hôm nay lòng bạn ra sao?', 'Dù vui hay buồn, Mây cũng muốn biết.'),
+      const _Prompt('Cảm xúc hôm nay của bạn là gì?', 'Chỉ một câu thôi, Mây đang chờ đây.'),
+      const _Prompt('Bạn đã kể cho Mây nghe chưa?', 'Một phút ghi lại, một ngày nhẹ nhõm hơn.'),
+      const _Prompt('Hôm nay bạn ổn không?', 'Kể cho Mây nghe một chút nhé.'),
+      const _Prompt('Điều gì đang diễn ra trong bạn?', 'Ghi lại giúp bạn nhìn rõ cảm xúc của mình hơn.'),
+      const _Prompt('Bạn thấy trong người thế nào?', 'Một khoảnh khắc dừng lại, cũng là chăm sóc bản thân.'),
+      const _Prompt('Sau một ngày, bạn cảm thấy ra sao?', 'Ghi lại trước khi cảm xúc trôi qua nhé.'),
+      const _Prompt('Bạn đang mang cảm xúc gì?', 'Mây luôn ở đây, sẵn sàng lắng nghe bạn.'),
+      const _Prompt('Hôm nay là một ngày thế nào?', 'Ghi lại một chút — rồi thử một bài thiền nhẹ nhàng nhé.'),
+      const _Prompt('Bạn đã dành thời gian cho mình chưa?', 'Bắt đầu bằng việc ghi lại cảm xúc nhé.'),
+      _Prompt('$greeting, bạn thế nào rồi?', 'Ghi lại cảm xúc, rồi thử một bài thở ngắn nếu cần.'),
+    ];
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -24,10 +53,13 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   MeditationSession? _recommended;
+  late final _Prompt _prompt;
 
   @override
   void initState() {
     super.initState();
+    final prompts = _homePrompts(greetingForHour());
+    _prompt = prompts[Random().nextInt(prompts.length)];
     final entries = context.read<AppState>().entries;
     if (entries.isNotEmpty) {
       SessionsApi.instance.fetchAll().then((sessions) {
@@ -99,14 +131,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isFirstDay ? 'Hôm nay là ngày đầu tiên của bạn ở An.' : 'Hôm nay bạn thế nào?',
+                      isFirstDay ? 'Hôm nay là ngày đầu tiên của bạn ở An.' : _prompt.question,
                       style: const TextStyle(fontFamily: 'Lora', fontSize: 19, height: 27 / 19, color: AppColors.ink),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      isFirstDay
-                          ? 'Mây chưa biết gì về bạn cả. Kể cho Mây nghe hôm nay bạn thế nào — mất chừng mười giây.'
-                          : 'Mây đang chờ bạn kể. Mất chừng mười giây.',
+                      isFirstDay ? 'Mây chưa biết gì về bạn cả. Kể cho Mây nghe hôm nay bạn thế nào — mất chừng mười giây.' : _prompt.description,
                       style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13.5, height: 21 / 13.5, color: AppColors.ink.withValues(alpha: 0.55)),
                     ),
                     const SizedBox(height: 16),
