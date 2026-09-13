@@ -3,12 +3,14 @@ import 'package:provider/provider.dart';
 import '../../models/meditation_session.dart';
 import '../../models/mood.dart';
 import '../../services/meditation_recommend.dart';
+import '../../services/notifications/notification_service.dart';
 import '../../services/sessions_api.dart';
 import '../../services/streak_encourage.dart';
 import '../../state/app_state.dart';
 import '../../theme/colors.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/may.dart';
+import '../../widgets/session_thumb.dart';
 import '../main_tabs.dart';
 import '../meditation/player_screen.dart';
 import '../premium/paywall_screen.dart';
@@ -31,13 +33,68 @@ class _SavedScreenState extends State<SavedScreen> {
     final tagLabel = state.draftTags.isNotEmpty
         ? kTags.firstWhere((t) => t.key == state.draftTags.first, orElse: () => TagDef(state.draftTags.first, state.draftTags.first)).label
         : null;
-    _message = generateStreakMessage(state.draftMood, state.streakDays, tagLabel: tagLabel);
+    // Today's entry is already saved and counted; the arc comes from every
+    // earlier entry's mood, most-recent first.
+    final now = DateTime.now();
+    bool isToday(DateTime d) => d.year == now.year && d.month == now.month && d.day == now.day;
+    final pastMoods = state.entries.where((e) => !isToday(e.entryDate)).map((e) => e.mood).toList();
+    final trend = computeMoodTrend(
+      state.draftMood,
+      pastMoods,
+      streak: state.streakDays,
+      totalEntries: state.entries.length,
+    );
+    _message = generateStreakMessage(
+      state.draftMood,
+      state.streakDays,
+      tagLabel: tagLabel,
+      trend: trend,
+      intensity: state.draftIntensity,
+    );
     SessionsApi.instance.fetchAll().then((sessions) {
       if (!mounted) return;
       setState(() => _recommended = pickRecommendation(sessions, state.draftMood));
     }).catchError((Object e) {
       debugPrint('SavedScreen: failed to load recommendation: $e');
     });
+
+    // First check-in ever → this is the moment to offer daily reminders.
+    if (!state.notifPrimed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _offerReminders());
+    }
+  }
+
+  Future<void> _offerReminders() async {
+    if (!mounted) return;
+    final wants = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Để Mây nhắc bạn nhé?', style: TextStyle(fontFamily: 'Lora', fontSize: 20, color: AppColors.ink)),
+        content: Text(
+          'Mỗi ngày Mây gửi hai lời nhắc nhẹ: một để ghi cảm xúc, một để thiền. '
+          'Giờ giấc Mây tự điều chỉnh theo bạn. Tắt bất cứ lúc nào trong phần Cài đặt.',
+          style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13.5, height: 22 / 13.5, color: AppColors.ink.withValues(alpha: 0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Để sau', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 14, color: AppColors.ink.withValues(alpha: 0.5))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Có, nhắc mình', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 14, color: AppColors.sage)),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    await context.read<AppState>().markNotifPrimed();
+    if (wants ?? false) {
+      await NotificationService.instance.requestPermission();
+      if (mounted) context.read<AppState>().rescheduleReminders();
+    }
   }
 
   @override
@@ -66,6 +123,7 @@ class _SavedScreenState extends State<SavedScreen> {
           minutes: s.minutes,
           audioUrl: SessionsApi.instance.resolve(s.audioUrl),
           imageUrl: s.imageUrl != null ? SessionsApi.instance.resolve(s.imageUrl!) : null,
+          sessionId: s.id,
         ),
       ));
     }
@@ -102,14 +160,10 @@ class _SavedScreenState extends State<SavedScreen> {
                           Text('GỢI Ý CHO BẠN', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: AppColors.ink.withValues(alpha: 0.45))),
                           const SizedBox(height: 12),
                           Row(children: [
-                            Container(
-                              width: 54,
-                              height: 54,
-                              clipBehavior: Clip.hardEdge,
-                              decoration: BoxDecoration(color: AppColors.sageTint, borderRadius: BorderRadius.circular(16)),
-                              child: _recommended!.imageUrl != null
-                                  ? Image.network(SessionsApi.instance.resolve(_recommended!.imageUrl!), fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink())
-                                  : null,
+                            SessionThumbnail(
+                              size: 54,
+                              color: AppColors.sageTint,
+                              imageUrl: _recommended!.imageUrl != null ? SessionsApi.instance.resolve(_recommended!.imageUrl!) : null,
                             ),
                             const SizedBox(width: 14),
                             Expanded(

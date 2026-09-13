@@ -340,7 +340,7 @@ class _MeetMayPage extends StatelessWidget {
           Transform.translate(
             offset: const Offset(-25, 0),
             child: const _Breathing(
-              child: May(mood: Mood.binhYen, size: 150),
+              child: May(mood: Mood.binhThuong, size: 150),
             ),
           ),
           const SizedBox(height: 44),

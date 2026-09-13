@@ -22,6 +22,11 @@ class PlayerScreen extends StatefulWidget {
   final String? imageUrl;
   final String? seriesLabel;
 
+  /// Backend id of the catalog session being played, when there is one —
+  /// attached to each meditation-time log so the server can attribute
+  /// listened time. Null for the standalone breathing timers.
+  final String? sessionId;
+
   const PlayerScreen({
     super.key,
     required this.kind,
@@ -31,6 +36,7 @@ class PlayerScreen extends StatefulWidget {
     this.audioUrl,
     this.imageUrl,
     this.seriesLabel,
+    this.sessionId,
   });
 
   @override
@@ -46,6 +52,11 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
   StreamSubscription<bool>? _playingSub;
 
   bool _playing = true;
+  // Distinguishes "Phát" (never started yet — including the brief window
+  // while audio is still loading, before the first real play() lands) from
+  // "Tiếp" (was playing, now paused) — both would otherwise collapse to the
+  // same "_playing == false" state.
+  bool _hasStarted = false;
   int _phase = 0;
   Duration _elapsed = Duration.zero;
   Duration? _duration;
@@ -66,7 +77,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
     _loggedSeconds = _elapsed.inSeconds;
     final appState = _appState;
     debugPrint('PlayerScreen: logging ${delta}s of meditation time (elapsed=${_elapsed.inSeconds}s)');
-    WidgetsBinding.instance.addPostFrameCallback((_) => appState.addMeditationSeconds(delta));
+    WidgetsBinding.instance.addPostFrameCallback((_) => appState.addMeditationSeconds(delta, sessionId: widget.sessionId));
   }
 
   int get _totalSeconds => _duration?.inSeconds ?? widget.minutes * 60;
@@ -88,7 +99,10 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
       _player = player;
       _positionSub = player.positionStream.listen((p) => setState(() => _elapsed = p));
       _durationSub = player.durationStream.listen((d) => setState(() => _duration = d));
-      _playingSub = player.playingStream.listen((p) => setState(() => _playing = p));
+      _playingSub = player.playingStream.listen((p) => setState(() {
+            _playing = p;
+            if (p) _hasStarted = true;
+          }));
       player
           .setAudioSource(LockCachingAudioSource(
             Uri.parse(url),
@@ -103,7 +117,9 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
           .catchError((Object e) => debugPrint('PlayerScreen: failed to load audio: $e'));
     } else {
       // No recording yet — keep the old silent countdown so the breathing
-      // animation still works standalone.
+      // animation still works standalone. Starts immediately, no loading
+      // gap, so it's genuinely "started" from the first frame.
+      _hasStarted = true;
       _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (_playing && _elapsed.inSeconds < _totalSeconds) {
           setState(() => _elapsed += const Duration(seconds: 1));
@@ -124,6 +140,17 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
     _playingSub?.cancel();
     _player?.dispose();
     super.dispose();
+  }
+
+  /// Only two guides exist app-wide and callers pass the already-resolved
+  /// display name (not a stable key), so a small name match here is simpler
+  /// than threading a guide key through every PlayerScreen call site.
+  String? get _guidePhotoAsset {
+    final g = widget.guide;
+    if (g == null) return null;
+    if (g.contains('Justin')) return 'assets/guides/justin.jpg';
+    if (g.contains('Trâm')) return 'assets/guides/tram.jpg';
+    return null;
   }
 
   String _fmt(int sec) {
@@ -194,7 +221,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
                       ),
                       Container(width: 236, height: 236, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white.withValues(alpha: 0.14)))),
                       Container(width: 170, height: 170, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white.withValues(alpha: 0.08)))),
-                      const May(mood: Mood.binhYen, size: 110),
+                      const May(mood: Mood.binhThuong, size: 110),
                     ],
                   ),
                 ),
@@ -219,7 +246,13 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
                 ),
                 const SizedBox(height: 16),
                 Row(children: [
-                  Container(width: 36, height: 36, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.14))),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    clipBehavior: Clip.hardEdge,
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.14)),
+                    child: _guidePhotoAsset != null ? Image.asset(_guidePhotoAsset!, fit: BoxFit.cover) : null,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -262,7 +295,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
                       height: 72,
                       alignment: Alignment.center,
                       decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-                      child: Text(_playing ? 'Dừng' : 'Tiếp', style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 13, color: Color(0xFF16201E))),
+                      child: Text(_playing ? 'Dừng' : (_hasStarted ? 'Tiếp' : 'Phát'), style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 13, color: Color(0xFF16201E))),
                     ),
                   ),
                   const SizedBox(width: 34),

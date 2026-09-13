@@ -7,6 +7,7 @@ import '../../models/mood.dart';
 import '../../services/mood_insight.dart';
 import '../../state/app_state.dart';
 import '../../theme/colors.dart';
+import '../checkin/mood_checkin_screen.dart';
 import 'day_detail_screen.dart';
 
 const _rangeTabs = ['Tuần', 'Tháng'];
@@ -113,12 +114,29 @@ class _JournalScreenState extends State<JournalScreen> {
     // background refresh timer would reshuffle the sentence every 5s.
     final insightSeed = now.year * 10000 + now.month * 100 + now.day + (isWeek ? 0 : 1);
     final insight = generateInsight(entriesInRange, seed: insightSeed);
-    final meditationMinutes = context.watch<AppState>().meditationSecondsInRange(rangeStart, rangeEnd) ~/ 60;
+    // Round rather than floor — a handful of short chunks adding up to, say,
+    // 49s would floor-divide to "0 phút", reading as if nothing was logged
+    // at all even though real practice time was recorded.
+    final meditationMinutes = (context.watch<AppState>().meditationSecondsInRange(rangeStart, rangeEnd) / 60).round();
 
     void openDay(DateTime d) {
       final entry = byDay[_dayKey(d)];
-      if (entry == null) return;
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => DayDetailScreen(entryId: entry.id)));
+      if (entry != null) {
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => DayDetailScreen(entryId: entry.id)));
+        return;
+      }
+      // No entry yet — let the user record one, but only for today or a
+      // past day (can't record something that hasn't happened).
+      final todayMidnight = DateTime(now.year, now.month, now.day);
+      if (d.isAfter(todayMidnight)) return;
+      final appState = context.read<AppState>();
+      if (d == todayMidnight) {
+        appState.beginDraftEntry();
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MoodCheckInScreen()));
+      } else {
+        appState.beginDraftEntryForDate(d);
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => MoodCheckInScreen(forDate: d, skipSavedScreen: true)));
+      }
     }
 
     return Container(

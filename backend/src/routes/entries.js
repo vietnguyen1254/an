@@ -1,6 +1,6 @@
 import { query } from '../db.js';
 
-const MOODS = new Set(['binhYen', 'vui', 'binhThuong', 'loLang', 'buon', 'kietSuc']);
+const MOODS = new Set(['tucGian', 'vui', 'binhThuong', 'loLang', 'buon', 'cangThang']);
 
 function validateEntry(body, { partial = false } = {}) {
   const errors = [];

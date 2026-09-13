@@ -1,19 +1,68 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/meditation_session.dart';
+import '../../services/meditation_recommend.dart';
+import '../../services/sessions_api.dart';
 import '../../state/app_state.dart';
 import '../../theme/colors.dart';
+import '../../utils/vn_date.dart';
 import '../../widgets/may.dart';
+import '../../widgets/session_thumb.dart';
+import '../checkin/mood_checkin_screen.dart';
 import '../meditation/player_screen.dart';
+import '../premium/paywall_screen.dart';
 
-class DayDetailScreen extends StatelessWidget {
+class DayDetailScreen extends StatefulWidget {
   final String entryId;
   const DayDetailScreen({super.key, required this.entryId});
 
   @override
+  State<DayDetailScreen> createState() => _DayDetailScreenState();
+}
+
+class _DayDetailScreenState extends State<DayDetailScreen> {
+  late final Future<List<MeditationSession>> _sessionsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _sessionsFuture = SessionsApi.instance.fetchAll();
+  }
+
+  Future<void> _confirmDelete(BuildContext context, String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Xoá cảm xúc này?', style: TextStyle(fontFamily: 'Lora', fontSize: 20, color: AppColors.ink)),
+        content: Text(
+          'Ghi chú và toàn bộ chi tiết ngày này sẽ bị xoá vĩnh viễn.',
+          style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13.5, height: 22 / 13.5, color: AppColors.ink.withValues(alpha: 0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Huỷ', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 14, color: AppColors.ink.withValues(alpha: 0.5))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Xoá', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 14, color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+    if (!(confirmed ?? false)) return;
+    if (!context.mounted) return;
+    await context.read<AppState>().deleteEntry(id);
+    if (context.mounted) Navigator.of(context).pop();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final entries = context.watch<AppState>().entries;
-    final matches = entries.where((e) => e.id == entryId);
+    final state = context.watch<AppState>();
+    final matches = state.entries.where((e) => e.id == widget.entryId);
     if (matches.isEmpty) return const SizedBox.shrink();
     final entry = matches.first;
 
@@ -25,8 +74,35 @@ class DayDetailScreen extends StatelessWidget {
         )
         .toList();
 
+    // Sessions actually listened to on this calendar day — one card per
+    // distinct session, no listened-duration detail (not tracked per-session).
+    final listenedSessionIds = state.meditationLog
+        .where((m) => m.date.year == entry.entryDate.year && m.date.month == entry.entryDate.month && m.date.day == entry.entryDate.day)
+        .map((m) => m.sessionId)
+        .whereType<String>()
+        .toSet();
+
+    void openSession(MeditationSession s) {
+      final isPremium = state.plan != PlanTier.free;
+      if (!s.isFree && !isPremium) {
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PaywallScreen()));
+        return;
+      }
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => PlayerScreen(
+          kind: s.kind == SessionKind.breathing ? PlayerKind.breathing : PlayerKind.guided,
+          title: s.title,
+          guide: guideName(s.guide),
+          minutes: s.minutes,
+          audioUrl: SessionsApi.instance.resolve(s.audioUrl),
+          imageUrl: s.imageUrl != null ? SessionsApi.instance.resolve(s.imageUrl!) : null,
+          sessionId: s.id,
+        ),
+      ));
+    }
+
     return Scaffold(
-      backgroundColor: AppColors.appBg,
+      backgroundColor: moodWash(entry.mood),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(22, 14, 22, 24),
@@ -36,27 +112,38 @@ class DayDetailScreen extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Tháng ${entry.entryDate.month}',
-                    style: TextStyle(
-                      fontFamily: 'BeVietnamPro',
-                      fontSize: 14,
-                      color: AppColors.ink.withValues(alpha: 0.5),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Text(
+                      'Đóng',
+                      style: TextStyle(
+                        fontFamily: 'BeVietnamPro',
+                        fontSize: 14,
+                        color: AppColors.ink.withValues(alpha: 0.5),
+                      ),
                     ),
                   ),
                   Row(
                     children: [
-                      Text(
-                        'Sửa',
-                        style: TextStyle(
-                          fontFamily: 'BeVietnamPro',
-                          fontSize: 14,
-                          color: AppColors.ink.withValues(alpha: 0.5),
+                      GestureDetector(
+                        onTap: () {
+                          context.read<AppState>().beginEditEntry(entry);
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => MoodCheckInScreen(skipSavedScreen: true, forDate: entry.entryDate)),
+                          );
+                        },
+                        child: Text(
+                          'Sửa',
+                          style: TextStyle(
+                            fontFamily: 'BeVietnamPro',
+                            fontSize: 14,
+                            color: AppColors.ink.withValues(alpha: 0.5),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 16),
                       GestureDetector(
-                        onTap: () => Navigator.of(context).pop(),
+                        onTap: () => _confirmDelete(context, entry.id),
                         child: Text(
                           'Xoá',
                           style: TextStyle(
@@ -72,7 +159,7 @@ class DayDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 22),
               Text(
-                entry.dateLabel,
+                formatVietnameseDate(entry.entryDate),
                 style: TextStyle(
                   fontFamily: 'BeVietnamPro',
                   fontWeight: FontWeight.w300,
@@ -91,7 +178,12 @@ class DayDetailScreen extends StatelessWidget {
               ),
               SizedBox(
                 height: 138,
-                child: Center(child: May(mood: entry.mood, size: 130)),
+                child: Center(
+                  child: Transform.translate(
+                    offset: const Offset(-18, -14),
+                    child: May(mood: entry.mood, size: 150),
+                  ),
+                ),
               ),
               const SizedBox(height: 10),
               Container(
@@ -216,70 +308,93 @@ class DayDetailScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const PlayerScreen(
-                      kind: PlayerKind.guided,
-                      title: 'Buông một ngày dài',
-                      guide: 'Justin Nguyễn',
-                      minutes: 12,
-                    ),
-                  ),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: AppColors.ink.withValues(alpha: 0.06),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE4EDF3),
-                          borderRadius: BorderRadius.circular(14),
+              if (listenedSessionIds.isNotEmpty)
+                FutureBuilder<List<MeditationSession>>(
+                  future: _sessionsFuture,
+                  builder: (context, snap) {
+                    final sessions = (snap.data ?? []).where((s) => listenedSessionIds.contains(s.id)).toList();
+                    if (sessions.isEmpty) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 20),
+                        Text(
+                          'BẠN ĐÃ NGHE',
+                          style: TextStyle(
+                            fontFamily: 'BeVietnamPro',
+                            fontSize: 10.5,
+                            letterSpacing: 1,
+                            color: AppColors.ink.withValues(alpha: 0.45),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'SAU ĐÓ BẠN ĐÃ NGHE',
-                              style: TextStyle(
-                                fontFamily: 'BeVietnamPro',
-                                fontSize: 10.5,
-                                letterSpacing: 1,
-                                color: AppColors.ink.withValues(alpha: 0.45),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Buông một ngày dài · 12 phút',
-                              style: TextStyle(
-                                fontFamily: 'BeVietnamPro',
-                                fontWeight: FontWeight.w500,
-                                fontSize: 14.5,
-                                color: AppColors.ink,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(height: 10),
+                        for (final s in sessions) ...[
+                          _SessionCard(session: s, onTap: () => openSession(s)),
+                          const SizedBox(height: 10),
+                        ],
+                      ],
+                    );
+                  },
                 ),
-              ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Same visual style as the session list cards in LibraryScreen — kept as
+/// its own private widget here since that one isn't importable (private to
+/// its file).
+class _SessionCard extends StatelessWidget {
+  final MeditationSession session;
+  final VoidCallback onTap;
+  const _SessionCard({required this.session, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = session.imageUrl != null ? SessionsApi.instance.resolve(session.imageUrl!) : null;
+    final color = session.guide == 'justin' ? AppColors.sageTint : AppColors.lavenderTint;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
+        child: Row(
+          children: [
+            SessionThumbnail(color: color, imageUrl: imageUrl),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(session.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 15, color: AppColors.ink)),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${session.kind == SessionKind.breathing ? "Bài thở" : "Bài thiền"} · ${session.minutes} phút',
+                    style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.5)),
+                  ),
+                  const SizedBox(height: 2),
+                  Text('Hướng dẫn bởi ${guideName(session.guide)}', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 12.5, color: AppColors.ink.withValues(alpha: 0.5))),
+                ],
+              ),
+            ),
+            if (session.isFree)
+              Container(
+                height: 26,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: AppColors.sageTint, borderRadius: BorderRadius.circular(13)),
+                child: const Text('Miễn phí', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 11, color: AppColors.sageTintText)),
+              )
+            else
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(color: AppColors.ink.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(13)),
+              ),
+          ],
         ),
       ),
     );

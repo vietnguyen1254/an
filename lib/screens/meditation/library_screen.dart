@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/meditation_session.dart';
@@ -9,6 +7,7 @@ import '../../services/sessions_api.dart';
 import '../../state/app_state.dart';
 import '../../theme/colors.dart';
 import '../../widgets/may.dart';
+import '../../widgets/session_thumb.dart';
 import '../premium/paywall_screen.dart';
 import 'player_screen.dart';
 
@@ -31,7 +30,7 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
 
   /// Always a positive expression on the recommendation card — not tied to
   /// the recorded mood that produced the recommendation.
-  final Mood _cardMood = Random().nextBool() ? Mood.vui : Mood.binhYen;
+  final Mood _cardMood = Mood.vui;
 
   @override
   void initState() {
@@ -88,6 +87,7 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
           audioUrl: SessionsApi.instance.resolve(s.audioUrl),
           imageUrl: s.imageUrl != null ? SessionsApi.instance.resolve(s.imageUrl!) : null,
           seriesLabel: s.seriesName != null ? 'Chuỗi "${s.seriesName}" · bài ${s.seriesIndex} / ${s.seriesTotal}' : null,
+          sessionId: s.id,
         ),
       ));
     }
@@ -251,23 +251,20 @@ class _RecommendedCard extends StatelessWidget {
         child: Stack(children: [
           Positioned(right: 10, top: 16, child: _RecommendedMay(mood: mood)),
           Align(
-            alignment: Alignment.bottomLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(width: 210, child: Text('ĐỀ XUẤT CHO BẠN', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: Colors.white.withValues(alpha: 0.55)))),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: 210,
-                    child: Text(session.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: 'Lora', fontSize: 20, height: 1.15, color: Colors.white)),
-                  ),
-                  const SizedBox(height: 6),
-                  Text('${guideName(session.guide)} · ${session.minutes} phút', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: Colors.white.withValues(alpha: 0.6))),
-                ],
-              ),
+            alignment: Alignment.centerLeft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(width: 210, child: Text('ĐỀ XUẤT CHO BẠN', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 11, letterSpacing: 1, color: Colors.white.withValues(alpha: 0.55)))),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: 210,
+                  child: Text(session.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: 'Lora', fontSize: 20, height: 1.15, color: Colors.white)),
+                ),
+                const SizedBox(height: 6),
+                Text('${guideName(session.guide)} · ${session.minutes} phút', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: Colors.white.withValues(alpha: 0.6))),
+              ],
             ),
           ),
         ]),
@@ -330,13 +327,7 @@ class _ListMeditationCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
         child: Row(children: [
-          Container(
-            width: 56,
-            height: 56,
-            clipBehavior: Clip.hardEdge,
-            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(16)),
-            child: imageUrl != null ? Image.network(imageUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink()) : null,
-          ),
+          SessionThumbnail(color: color, imageUrl: imageUrl),
           const SizedBox(width: 14),
           Expanded(
             child: Column(

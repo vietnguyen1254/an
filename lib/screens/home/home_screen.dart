@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/meditation_session.dart';
@@ -12,6 +10,7 @@ import '../../utils/vn_date.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/basics.dart';
 import '../../widgets/may.dart';
+import '../../widgets/session_thumb.dart';
 import '../checkin/mood_checkin_screen.dart';
 import '../meditation/minute_with_justin_screen.dart';
 import '../meditation/player_screen.dart';
@@ -59,7 +58,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     final prompts = _homePrompts(greetingForHour());
-    _prompt = prompts[Random().nextInt(prompts.length)];
+    // Deterministic per calendar day (not per app open/login) — days since
+    // an arbitrary epoch, so the same prompt sticks all day and only
+    // changes at local midnight.
+    final dayIndex = DateTime.now().difference(DateTime(2020, 1, 1)).inDays;
+    _prompt = prompts[dayIndex % prompts.length];
     final entries = context.read<AppState>().entries;
     if (entries.isNotEmpty) {
       SessionsApi.instance.fetchAll().then((sessions) {
@@ -93,33 +96,35 @@ class _HomeScreenState extends State<HomeScreen> {
           minutes: s.minutes,
           audioUrl: SessionsApi.instance.resolve(s.audioUrl),
           imageUrl: s.imageUrl != null ? SessionsApi.instance.resolve(s.imageUrl!) : null,
+          sessionId: s.id,
         ),
       ));
     }
 
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [AppColors.skyTop, AppColors.skyMid, AppColors.skyBottom],
+    return SizedBox.expand(
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppColors.skyTop, AppColors.skyMid, AppColors.skyBottom],
+          ),
         ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(22, 8, 22, 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  isFirstDay ? 'Chào bạn, ${state.userName}' : '${greetingForHour()}, ${state.userName}',
-                  style: const TextStyle(fontFamily: 'Lora', fontSize: 25, height: 32 / 25, color: AppColors.ink),
+        child: SafeArea(
+          bottom: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(22, 8, 22, 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    isFirstDay ? 'Chào bạn, ${state.userName}' : '${greetingForHour()}, ${state.userName}',
+                    style: const TextStyle(fontFamily: 'Lora', fontSize: 25, height: 32 / 25, color: AppColors.ink),
+                  ),
                 ),
-              ),
-              _MayStage(mood: isFirstDay ? Mood.binhThuong : Mood.binhYen),
+                const _MayStage(mood: Mood.vui),
               Container(
                 padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
@@ -191,14 +196,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: Row(
                       children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          clipBehavior: Clip.hardEdge,
-                          decoration: BoxDecoration(color: AppColors.sageTint, borderRadius: BorderRadius.circular(16)),
-                          child: _recommended!.imageUrl != null
-                              ? Image.network(SessionsApi.instance.resolve(_recommended!.imageUrl!), fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink())
-                              : null,
+                        SessionThumbnail(
+                          color: AppColors.sageTint,
+                          imageUrl: _recommended!.imageUrl != null ? SessionsApi.instance.resolve(_recommended!.imageUrl!) : null,
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -234,6 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+      ),
     );
   }
 }
@@ -248,7 +249,7 @@ class _MayStage extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 250,
+      height: 243,
       child: Stack(
         alignment: Alignment.center,
         clipBehavior: Clip.none,

@@ -69,6 +69,7 @@ class _GuideProfileScreenState extends State<GuideProfileScreen> {
           audioUrl: SessionsApi.instance.resolve(s.audioUrl),
           imageUrl: s.imageUrl != null ? SessionsApi.instance.resolve(s.imageUrl!) : null,
           seriesLabel: s.seriesName != null ? 'Chuỗi "${s.seriesName}" · bài ${s.seriesIndex} / ${s.seriesTotal}' : null,
+          sessionId: s.id,
         ),
       ));
     }

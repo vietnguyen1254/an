@@ -17,12 +17,15 @@ mobile app ──HTTPS──▶ nginx ──▶ api (Fastify) ──▶ postgres
 |---|---|---|---|
 | POST | `/v1/auth/session` | Firebase ID token (Bearer) | verify token, upsert user, return app JWT |
 | GET | `/v1/me` | app JWT | current user |
-| PATCH | `/v1/me` | app JWT | update `name`, `plan_tier` |
+| PATCH | `/v1/me` | app JWT | update `name`, `avatar`, `plan_tier` |
+| DELETE | `/v1/me` | app JWT | permanent account deletion (cascades entries + meditation logs) |
 | GET | `/v1/entries?since=<ISO>` | app JWT | journal entries (delta sync) |
 | POST | `/v1/entries` | app JWT | create `{mood,intensity,tags,note,entry_date}` |
 | PATCH | `/v1/entries/:id` | app JWT | update entry |
 | DELETE | `/v1/entries/:id` | app JWT | delete entry |
 | GET | `/v1/streak` | app JWT | consecutive-day streak |
+| GET | `/v1/meditation-logs?since=<ISO>` | app JWT | listened meditation time (delta sync) |
+| POST | `/v1/meditation-logs` | app JWT | log a chunk `{seconds, session_id?, logged_at?}` |
 | GET | `/v1/sessions?guide=&category=` | — | meditation/breathing catalog |
 | GET | `/healthz` | — | `{ok, db, firebase}` |
 

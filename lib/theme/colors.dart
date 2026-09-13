@@ -27,6 +27,7 @@ class AppColors {
   static const rose = Color(0xFFF6BDD4);
   static const blueGray = Color(0xFF8496B8);
   static const tan = Color(0xFFC4A38B);
+  static const ember = Color(0xFFBF5B44);
 
   static const premiumMint = Color(0xFFCFE2DB);
   static const premiumDarkA = Color(0xFF20423C);
@@ -52,21 +53,21 @@ class AppColors {
 }
 
 const Map<Mood, Color> moodColors = {
-  Mood.binhYen: AppColors.sage,
+  Mood.tucGian: AppColors.ember,
   Mood.vui: AppColors.rose,
   Mood.binhThuong: Color(0x401B2420),
   Mood.loLang: AppColors.lavender,
   Mood.buon: AppColors.blueGray,
-  Mood.kietSuc: AppColors.tan,
+  Mood.cangThang: AppColors.tan,
 };
 
 const Map<Mood, String> moodLabels = {
-  Mood.binhYen: 'Bình yên',
+  Mood.tucGian: 'Tức giận',
   Mood.vui: 'Vui vẻ',
   Mood.binhThuong: 'Bình thường',
   Mood.loLang: 'Lo âu',
   Mood.buon: 'Buồn',
-  Mood.kietSuc: 'Căng thẳng',
+  Mood.cangThang: 'Căng thẳng',
 };
 
 /// Fully opaque version of a mood accent — for bars and fills.
@@ -81,5 +82,5 @@ Color moodSolid(Mood m) {
 }
 
 /// A very light wash of the mood accent, for screen backgrounds that shift
-/// with the selected mood (e.g. Bình yên → barely-there green).
+/// with the selected mood (e.g. Tức giận → barely-there ember).
 Color moodWash(Mood m) => Color.lerp(AppColors.appBg, moodSolid(m), 0.14)!;

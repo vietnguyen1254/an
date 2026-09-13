@@ -1,12 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
 import '../../state/app_state.dart';
 import '../../theme/colors.dart';
+import '../../utils/vn_date.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/basics.dart';
 import 'paywall_screen.dart';
+import 'premium_copy.dart';
 
 const _freeFeatures = ['Theo dõi cảm xúc mỗi ngày', 'Bài tập thở cùng Mây', 'Góc nhìn hôm nay', 'Một bài thiền: Buông một ngày dài'];
+
+// Apple/Google require every auto-renewable subscription to be cancellable
+// through the store's own subscription-management screen — an app cannot
+// cancel it directly via API, so this always hands off there.
+const _iosManageSubscriptionsUrl = 'https://apps.apple.com/account/subscriptions';
+const _androidPackageName = 'com.an.an';
 
 class PlanScreen extends StatelessWidget {
   const PlanScreen({super.key});
@@ -66,6 +76,7 @@ class PlanScreen extends StatelessWidget {
       ),
       const SizedBox(height: 14),
       Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), gradient: const LinearGradient(colors: [AppColors.premiumDarkA, AppColors.premiumDarkB])),
         child: Column(
@@ -73,7 +84,7 @@ class PlanScreen extends StatelessWidget {
           children: [
             Text('CÒN KHOÁ', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 10.5, letterSpacing: 1, color: Colors.white.withValues(alpha: 0.5))),
             const SizedBox(height: 8),
-            const Text('Toàn bộ bài thiền dẫn bởi Justin và Trâm, chuỗi bài theo chủ đề, bài mới mỗi tuần.', style: TextStyle(fontFamily: 'Lora', fontSize: 21, height: 29 / 21, color: Colors.white)),
+            const Text('Toàn bộ bài thiền dẫn bởi Justin và Trâm, chuỗi bài theo chủ đề, nghe không giới hạn.', style: TextStyle(fontFamily: 'Lora', fontSize: 21, height: 29 / 21, color: Colors.white)),
             const SizedBox(height: 18),
             Row(children: [
               Expanded(
@@ -116,16 +127,43 @@ class PlanScreen extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 20),
-      AppButton(label: 'Dùng thử 7 ngày miễn phí', onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PaywallScreen()))),
+      AppButton(label: 'Nâng cấp Premium', onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PaywallScreen()))),
       const SizedBox(height: 12),
-      Text('Huỷ trước khi hết hạn thử thì không mất phí.', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 11.5, color: AppColors.ink.withValues(alpha: 0.45))),
+      Text('Tự động gia hạn theo gói bạn chọn. Huỷ bất cứ lúc nào.', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 11.5, color: AppColors.ink.withValues(alpha: 0.45))),
     ];
   }
 
+  Widget _benefitsCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('QUYỀN LỢI CỦA BẠN', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 10.5, letterSpacing: 1, color: AppColors.ink.withValues(alpha: 0.45))),
+          const SizedBox(height: 14),
+          ...kPremiumFeatures.map((f) => Padding(
+                padding: const EdgeInsets.only(bottom: 9),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Container(width: 5, height: 5, decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.sage)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(f, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13.5, height: 20 / 13.5, color: AppColors.ink.withValues(alpha: 0.7)))),
+                ]),
+              )),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _monthlyBody(BuildContext context, AppState state) {
+    final renewsAt = state.planRenewsAt;
     return [
       const SizedBox(height: 18),
       Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), gradient: const LinearGradient(colors: [AppColors.premiumDarkA, AppColors.premiumDarkB])),
         child: Column(
@@ -135,7 +173,10 @@ class PlanScreen extends StatelessWidget {
             const SizedBox(height: 8),
             const Text('An Premium · theo tháng', style: TextStyle(fontFamily: 'Lora', fontSize: 22, color: Colors.white)),
             const SizedBox(height: 8),
-            Text('199.000đ · gia hạn 03/10/2026', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: Colors.white.withValues(alpha: 0.55))),
+            Text(
+              renewsAt != null ? '199.000đ · gia hạn ${formatShortDate(renewsAt)}' : '199.000đ mỗi tháng',
+              style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: Colors.white.withValues(alpha: 0.55)),
+            ),
           ],
         ),
       ),
@@ -157,9 +198,9 @@ class PlanScreen extends StatelessWidget {
               ),
             ]),
             const SizedBox(height: 8),
-            Text('1.699.000đ mỗi năm, tính ra 141.500đ một tháng. Phần còn lại của tháng này được trừ vào gói mới.', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, height: 22 / 13, color: AppColors.ink.withValues(alpha: 0.65))),
+            Text('1.699.000đ mỗi năm, tính ra 141.500đ một tháng.', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, height: 22 / 13, color: AppColors.ink.withValues(alpha: 0.65))),
             const SizedBox(height: 16),
-            AppButton(label: 'Đổi sang gói năm', variant: AppButtonVariant.sage, height: 48, onPressed: () => state.setPlan(PlanTier.yearly)),
+            AppButton(label: 'Đổi sang gói năm', variant: AppButtonVariant.sage, height: 48, onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PaywallScreen()))),
           ],
         ),
       ),
@@ -168,19 +209,22 @@ class PlanScreen extends StatelessWidget {
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
         clipBehavior: Clip.hardEdge,
         child: const Column(children: [
-          AppListRow(title: 'Phương thức thanh toán', detail: 'Apple ID'),
-          AppListRow(title: 'Lịch sử thanh toán', isLast: true),
+          AppListRow(title: 'Phương thức thanh toán', detail: 'Apple ID', isLast: true),
         ]),
       ),
+      const SizedBox(height: 14),
+      _benefitsCard(),
       const SizedBox(height: 20),
-      _cancelButton(context, state),
+      _CancelButton(state: state, benefits: kPremiumFeatures),
     ];
   }
 
   List<Widget> _yearlyBody(BuildContext context, AppState state) {
+    final renewsAt = state.planRenewsAt;
     return [
       const SizedBox(height: 18),
       Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), gradient: const LinearGradient(colors: [AppColors.premiumDarkA, AppColors.premiumDarkB])),
         child: Column(
@@ -190,7 +234,10 @@ class PlanScreen extends StatelessWidget {
             const SizedBox(height: 8),
             const Text('An Premium · theo năm', style: TextStyle(fontFamily: 'Lora', fontSize: 22, color: Colors.white)),
             const SizedBox(height: 8),
-            Text('1.699.000đ · gia hạn 12/03/2027', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: Colors.white.withValues(alpha: 0.55))),
+            Text(
+              renewsAt != null ? '1.699.000đ · gia hạn ${formatShortDate(renewsAt)}' : '1.699.000đ mỗi năm',
+              style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, color: Colors.white.withValues(alpha: 0.55)),
+            ),
           ],
         ),
       ),
@@ -199,32 +246,91 @@ class PlanScreen extends StatelessWidget {
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: AppColors.ink.withValues(alpha: 0.06))),
         clipBehavior: Clip.hardEdge,
         child: const Column(children: [
-          AppListRow(title: 'Phương thức thanh toán', detail: 'Apple ID'),
-          AppListRow(title: 'Lịch sử thanh toán', isLast: true),
+          AppListRow(title: 'Phương thức thanh toán', detail: 'Apple ID', isLast: true),
         ]),
       ),
-      const SizedBox(height: 16),
-      Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(color: AppColors.sage.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-        child: Text(
-          'Nếu bạn huỷ, phần miễn phí vẫn giữ nguyên: theo dõi cảm xúc, bài tập thở, Góc nhìn hôm nay và một bài thiền. Nhật ký cảm xúc của bạn không mất.',
-          style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13, height: 22 / 13, color: AppColors.ink.withValues(alpha: 0.7)),
-        ),
-      ),
+      const SizedBox(height: 14),
+      _benefitsCard(),
       const SizedBox(height: 20),
-      _cancelButton(context, state),
+      _CancelButton(state: state, benefits: kPremiumFeatures),
     ];
   }
+}
 
-  Widget _cancelButton(BuildContext context, AppState state) {
-    return SizedBox(
-      height: 52,
-      child: OutlinedButton(
-        onPressed: () => state.setPlan(PlanTier.free),
-        style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)), side: BorderSide(color: AppColors.ink.withValues(alpha: 0.14))),
-        child: Text('Huỷ gia hạn', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 15, color: AppColors.ink.withValues(alpha: 0.6))),
+/// Big, deliberately sober — a muted brick red rather than the app's usual
+/// sage/mint, and a confirmation step first, so cancelling reads as a
+/// considered decision rather than a casual tap.
+class _CancelButton extends StatelessWidget {
+  final AppState state;
+  final List<String> benefits;
+  const _CancelButton({required this.state, required this.benefits});
+
+  Future<void> _openStoreManagement(BuildContext context) async {
+    final uri = Platform.isIOS
+        ? Uri.parse(_iosManageSubscriptionsUrl)
+        : Uri.parse('https://play.google.com/store/account/subscriptions?package=$_androidPackageName');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không thể mở trang quản lý gói đăng ký.')),
+      );
+    }
+  }
+
+  Future<void> _confirmCancel(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Huỷ gia hạn Premium?', style: TextStyle(fontFamily: 'Lora', fontSize: 20, color: AppColors.ink)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              state.planRenewsAt != null
+                  ? 'Gói hiện tại vẫn hoạt động đến hết ngày ${formatShortDate(state.planRenewsAt!)}. Sau đó bạn sẽ mất quyền truy cập:'
+                  : 'Khi hết chu kỳ hiện tại, bạn sẽ mất quyền truy cập:',
+              style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13.5, height: 22 / 13.5, color: AppColors.ink.withValues(alpha: 0.7)),
+            ),
+            const SizedBox(height: 10),
+            ...benefits.map((f) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('–  ', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.danger)),
+                    Expanded(child: Text(f, style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w400, fontSize: 13, height: 19 / 13, color: AppColors.ink.withValues(alpha: 0.75)))),
+                  ]),
+                )),
+            const SizedBox(height: 4),
+            Text(
+              'Bạn sẽ được chuyển đến ${Platform.isIOS ? "App Store" : "Google Play"} để huỷ.',
+              style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w300, fontSize: 13.5, height: 22 / 13.5, color: AppColors.ink.withValues(alpha: 0.7)),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Giữ gói', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 14, color: AppColors.ink.withValues(alpha: 0.5))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Tiếp tục huỷ', style: TextStyle(fontFamily: 'BeVietnamPro', fontWeight: FontWeight.w500, fontSize: 14, color: AppColors.danger)),
+          ),
+        ],
       ),
+    );
+    if (confirmed == true && context.mounted) await _openStoreManagement(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppButton(
+      label: 'Huỷ gia hạn',
+      variant: AppButtonVariant.danger,
+      height: 52,
+      onPressed: () => _confirmCancel(context),
     );
   }
 }

@@ -1,0 +1,101 @@
+{
+  "identifier" : "6FA30426-C441-4FE9-8413-A4D03CCD90D6",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : {
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "0FF66ADD-FF6D-4CD6-899D-1D7C42A0AE00",
+      "localizations" : [],
+      "name" : "An Premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "7.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "4FA91307-E3E4-4833-B844-6F374172AA4E",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Monthly An Premium subscription",
+              "displayName" : "An Premium — Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "an_premium_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "An Premium Monthly",
+          "subscriptionGroupID" : "0FF66ADD-FF6D-4CD6-899D-1D7C42A0AE00",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "67.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "28747277-4186-4784-B66F-7DE266296701",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Yearly An Premium subscription",
+              "displayName" : "An Premium — Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "an_premium_yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "An Premium Yearly",
+          "subscriptionGroupID" : "0FF66ADD-FF6D-4CD6-899D-1D7C42A0AE00",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

@@ -179,10 +179,34 @@ class AuthService {
     if (available) await _fb.signOut();
   }
 
+  /// Deletes the Firebase auth record. Throws (usually `requires-recent-login`)
+  /// if the session is too old — the caller should fall back to [signOut],
+  /// since the user's actual data has already been removed on the backend.
+  Future<void> deleteAccount() async {
+    if (available) {
+      await _fb.currentUser?.delete();
+    }
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {}
+    try {
+      await FacebookAuth.instance.logOut();
+    } catch (_) {}
+  }
+
   /// A previously signed-in user restored by Firebase on launch, if any.
+  ///
+  /// Waits on [authStateChanges] rather than reading [currentUser]
+  /// synchronously — Firebase restores its persisted session
+  /// asynchronously after `Firebase.initializeApp()`, so `currentUser` can
+  /// read as null for a brief window on a cold start even for an actually
+  /// logged-in user. Trusting that would make AppState think "Firebase says
+  /// signed out" and wipe the real local session (see `_clear()` in
+  /// app_state.dart). `authStateChanges().first` waits for Firebase's own
+  /// restoration to actually finish before answering.
   Future<AuthUser?> restore() async {
     if (!available) return null;
-    final user = _fb.currentUser;
+    final user = await _fb.authStateChanges().first;
     if (user == null) return null;
     final idToken = await user.getIdToken() ?? '';
     return AuthUser(

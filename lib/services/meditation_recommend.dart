@@ -9,12 +9,12 @@ String guideName(String key) => guideNames[key] ?? key;
 
 /// Which meditation category best matches each check-in mood.
 const moodCategory = {
-  Mood.binhYen: 'tich-cuc',
+  Mood.tucGian: 'lo-au',
   Mood.vui: 'tich-cuc',
   Mood.binhThuong: 'tich-cuc',
   Mood.loLang: 'lo-au',
   Mood.buon: 'chua-lanh',
-  Mood.kietSuc: 'thu-gian',
+  Mood.cangThang: 'thu-gian',
 };
 
 /// Picks a random session matching [mood]'s category, falling back to any

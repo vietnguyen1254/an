@@ -4,12 +4,35 @@ import 'package:provider/provider.dart';
 import '../../models/mood.dart';
 import '../../state/app_state.dart';
 import '../../theme/colors.dart';
+import '../../utils/vn_date.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/may.dart';
 import 'saved_screen.dart';
 
 class MoodCheckInScreen extends StatelessWidget {
-  const MoodCheckInScreen({super.key});
+  /// True when editing/backfilling a past day's entry from the journal —
+  /// saving then just pops back instead of pushing SavedScreen, since that
+  /// screen's streak/encouragement copy assumes a fresh "today" check-in.
+  final bool skipSavedScreen;
+
+  /// Set when recording a past day that has no entry yet (tapped from the
+  /// journal's week/month grid) — swaps the header copy to name that day
+  /// instead of implying "today", and [AppState.saveDraftEntry] dates the
+  /// new entry to this instead of now.
+  final DateTime? forDate;
+
+  const MoodCheckInScreen({super.key, this.skipSavedScreen = false, this.forDate});
+
+  void _save(BuildContext context) {
+    context.read<AppState>().saveDraftEntry();
+    if (skipSavedScreen) {
+      Navigator.of(context).pop();
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const SavedScreen()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,25 +50,58 @@ class MoodCheckInScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Text(
-                    'Đóng',
-                    style: TextStyle(
-                      fontFamily: 'BeVietnamPro',
-                      fontSize: 14,
-                      color: AppColors.ink.withValues(alpha: 0.5),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Text(
+                        'Đóng',
+                        style: TextStyle(
+                          fontFamily: 'BeVietnamPro',
+                          fontSize: 14,
+                          color: AppColors.ink.withValues(alpha: 0.5),
+                        ),
+                      ),
                     ),
-                  ),
+                    GestureDetector(
+                      onTap: () => _save(context),
+                      child: const Text(
+                        'Lưu',
+                        style: TextStyle(
+                          fontFamily: 'BeVietnamPro',
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                          color: AppColors.sage,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 SizedBox(
                   height: 160,
-                  child: Center(child: May(mood: state.draftMood, size: 156)),
+                  child: Center(
+                    child: Transform.translate(
+                      offset: const Offset(-7, -7),
+                      child: May(mood: state.draftMood, size: 156),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'Bạn đang cảm thấy thế nào?',
-                  style: TextStyle(
+                if (forDate != null) ...[
+                  Text(
+                    formatVietnameseDate(forDate!),
+                    style: TextStyle(
+                      fontFamily: 'BeVietnamPro',
+                      fontSize: 13,
+                      color: AppColors.ink.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                ],
+                Text(
+                  forDate != null ? 'Hôm đó bạn cảm thấy thế nào?' : 'Bạn đang cảm thấy thế nào?',
+                  style: const TextStyle(
                     fontFamily: 'Lora',
                     fontSize: 26,
                     height: 34 / 26,
@@ -225,7 +281,8 @@ class MoodCheckInScreen extends StatelessWidget {
                       color: AppColors.ink.withValues(alpha: 0.06),
                     ),
                   ),
-                  child: TextField(
+                  child: TextFormField(
+                    initialValue: state.draftNote,
                     onChanged: (v) => context.read<AppState>().setDraftNote(v),
                     maxLines: null,
                     style: const TextStyle(
@@ -251,12 +308,7 @@ class MoodCheckInScreen extends StatelessWidget {
                 const SizedBox(height: 20),
                 AppButton(
                   label: 'Lưu cảm xúc',
-                  onPressed: () {
-                    context.read<AppState>().saveDraftEntry();
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const SavedScreen()),
-                    );
-                  },
+                  onPressed: () => _save(context),
                 ),
               ],
             ),

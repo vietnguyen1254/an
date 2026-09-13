@@ -13,9 +13,22 @@ String formatVietnameseDate([DateTime? d]) {
   return '${_weekdaysVi[date.weekday - 1]}, ${date.day} tháng ${date.month}';
 }
 
+/// Short numeric date for billing/renewal copy — e.g. "12/03/2027".
+String formatShortDate(DateTime d) {
+  final dd = d.day.toString().padLeft(2, '0');
+  final mm = d.month.toString().padLeft(2, '0');
+  return '$dd/$mm/${d.year}';
+}
+
+/// [d] defaults to [DateTime.now()], which on-device is always the phone's
+/// own local time (never the backend's) — Dart's `DateTime.now()` reads the
+/// device clock/timezone directly, so this needs no timezone handling of
+/// its own.
 String greetingForHour([DateTime? d]) {
-  final date = d ?? DateTime.now();
-  if (date.hour < 11) return 'Chào buổi sáng';
-  if (date.hour < 18) return 'Chào buổi chiều';
-  return 'Chào buổi tối';
+  final h = (d ?? DateTime.now()).hour;
+  if (h >= 5 && h < 11) return 'Chào buổi sáng';
+  if (h < 13) return 'Chào buổi trưa';
+  if (h < 18) return 'Chào buổi chiều';
+  if (h < 22) return 'Chào buổi tối';
+  return 'Khuya rồi';
 }

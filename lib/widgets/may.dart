@@ -14,10 +14,10 @@ class _MoodSpec {
   final Color shade;
   final Color glow;
   final Color ink;
-  final String eyes; // arc | dot | sad | heavy
-  final String mouth; // grin | smile | line | o | frown | flat
+  final String eyes; // arc | dot | sad | heavy | glare
+  final String mouth; // grin | smile | line | o | frown | flat | wavy | grit
   final bool cheeks;
-  final bool brows;
+  final String? browStyle; // worried | furrowed | null
   final bool sparkly;
   final bool sway;
   final int drops;
@@ -30,7 +30,7 @@ class _MoodSpec {
     required this.eyes,
     required this.mouth,
     this.cheeks = false,
-    this.brows = false,
+    this.browStyle,
     this.sparkly = false,
     this.sway = false,
     this.drops = 0,
@@ -38,13 +38,15 @@ class _MoodSpec {
 }
 
 final Map<Mood, _MoodSpec> _moods = {
-  Mood.binhYen: const _MoodSpec(
-    fill: Color(0xFFFCFDFF),
-    shade: Color(0x52B0C4D6),
-    glow: Color(0x9EFFFFFF),
-    ink: Color(0xFF5C6E80),
-    eyes: 'arc',
-    mouth: 'smile',
+  Mood.tucGian: const _MoodSpec(
+    fill: Color(0xFFFDF1EE),
+    shade: Color(0x5CDB8A72),
+    glow: Color(0x80F2A98C),
+    ink: Color(0xFF8C3D2C),
+    eyes: 'glare',
+    mouth: 'grit',
+    browStyle: 'furrowed',
+    sway: true,
   ),
   Mood.vui: const _MoodSpec(
     fill: Color(0xFFFFFDF6),
@@ -72,7 +74,7 @@ final Map<Mood, _MoodSpec> _moods = {
     ink: Color(0xFF5D5375),
     eyes: 'dot',
     mouth: 'wavy',
-    brows: true,
+    browStyle: 'worried',
     sway: true,
   ),
   Mood.buon: const _MoodSpec(
@@ -84,14 +86,15 @@ final Map<Mood, _MoodSpec> _moods = {
     mouth: 'frown',
     drops: 4,
   ),
-  Mood.kietSuc: const _MoodSpec(
+  Mood.cangThang: const _MoodSpec(
     fill: Color(0xFFF0EFEB),
     shade: Color(0x5CA09888),
     glow: Color(0x52C0A894),
     ink: Color(0xFF6E6656),
     eyes: 'heavy',
-    mouth: 'flat',
-    drops: 1,
+    mouth: 'grit',
+    browStyle: 'furrowed',
+    drops: 2,
   ),
 };
 
@@ -103,7 +106,7 @@ class May extends StatefulWidget {
   final Mood mood;
   final double size;
 
-  const May({super.key, this.mood = Mood.binhYen, this.size = 96});
+  const May({super.key, this.mood = Mood.binhThuong, this.size = 96});
 
   @override
   State<May> createState() => _MayState();
@@ -141,7 +144,7 @@ class _MayState extends State<May> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final m = _moods[widget.mood] ?? _moods[Mood.binhYen]!;
+    final m = _moods[widget.mood] ?? _moods[Mood.binhThuong]!;
     final scale = widget.size / _box;
     final droop = m.eyes == 'heavy' ? 6.0 : 0.0;
 
@@ -215,13 +218,17 @@ class _MayState extends State<May> with TickerProviderStateMixin {
     );
   }
 
+  /// Two twinkles anchored right against the cloud's own rim (not floating
+  /// in the empty space above it) — at small render sizes (e.g. the library
+  /// screen's recommendation card) a sparkle positioned in that empty space
+  /// reads as a stray disconnected dot rather than a twinkle on the cloud.
   List<Widget> _sparkles() {
     return [
       AnimatedBuilder(
         animation: _sparkCtrl,
         builder: (context, _) => Positioned(
-          left: 20,
-          top: 38,
+          left: _bwX + 22,
+          top: _bwY + 28,
           child: Transform.rotate(
             angle: math.pi / 4,
             child: Opacity(
@@ -238,8 +245,8 @@ class _MayState extends State<May> with TickerProviderStateMixin {
       AnimatedBuilder(
         animation: _sparkCtrl,
         builder: (context, _) => Positioned(
-          right: 20,
-          top: 54,
+          left: _bwX + 152,
+          top: _bwY + 32,
           child: Transform.rotate(
             angle: math.pi / 4,
             child: Opacity(
@@ -308,7 +315,8 @@ class _MayState extends State<May> with TickerProviderStateMixin {
               ),
             ),
           ),
-          if (m.brows) ..._brows(),
+          if (m.browStyle == 'worried') ..._worriedBrows(),
+          if (m.browStyle == 'furrowed') ..._furrowedBrows(m.ink),
           _eye(m.eyes, 60, droop, m.ink),
           _eye(m.eyes, 104, droop, m.ink),
           if (m.cheeks) ..._cheeks(),
@@ -318,7 +326,8 @@ class _MayState extends State<May> with TickerProviderStateMixin {
     );
   }
 
-  List<Widget> _brows() {
+  /// Inner corners raised, outer corners low — reads as apprehensive/uneasy.
+  List<Widget> _worriedBrows() {
     return [
       Positioned(
         left: _bwX + 58,
@@ -356,6 +365,44 @@ class _MayState extends State<May> with TickerProviderStateMixin {
                 topLeft: Radius.circular(8),
                 topRight: Radius.circular(8),
               ),
+            ),
+          ),
+        ),
+      ),
+    ];
+  }
+
+  /// Inner corners pulled down and together, lower and steeper than
+  /// [_worriedBrows] — a furrowed scowl for Mood.tucGian.
+  List<Widget> _furrowedBrows(Color ink) {
+    final color = ink.withValues(alpha: 0.75);
+    return [
+      Positioned(
+        left: _bwX + 55,
+        top: _bwY + 54,
+        child: Transform.rotate(
+          angle: 22 * math.pi / 180,
+          child: Container(
+            width: 18,
+            height: 3,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+      ),
+      Positioned(
+        left: _bwX + 105,
+        top: _bwY + 54,
+        child: Transform.rotate(
+          angle: -22 * math.pi / 180,
+          child: Container(
+            width: 18,
+            height: 3,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
         ),
@@ -410,6 +457,27 @@ class _MayState extends State<May> with TickerProviderStateMixin {
             width: 9,
             height: 9,
             decoration: BoxDecoration(color: ink, shape: BoxShape.circle),
+          ),
+        ),
+      );
+    }
+    if (type == 'glare') {
+      final side = x < 89 ? 1.0 : -1.0;
+      return Positioned(
+        left: _bwX + x - 1,
+        top: _bwY + 63 + droop,
+        child: Opacity(
+          opacity: 0.82,
+          child: Transform.rotate(
+            angle: side * 18 * math.pi / 180,
+            child: Container(
+              width: 15,
+              height: 3,
+              decoration: BoxDecoration(
+                color: ink,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
           ),
         ),
       );
@@ -531,6 +599,24 @@ class _MayState extends State<May> with TickerProviderStateMixin {
             width: 18,
             height: 9,
             child: CustomPaint(painter: _WavyMouthPainter(ink)),
+          ),
+        ),
+      );
+    }
+    if (type == 'grit') {
+      return Positioned(
+        left: cx - 8,
+        top: _bwY + 80,
+        child: Opacity(
+          opacity: 0.75,
+          child: Container(
+            width: 16,
+            height: 6,
+            decoration: BoxDecoration(
+              border: Border.all(color: ink, width: 2),
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Center(child: Container(width: 1.5, height: 6, color: ink)),
           ),
         ),
       );
