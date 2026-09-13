@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../../models/mood.dart';
 import '../../services/sessions_api.dart';
@@ -112,14 +114,26 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
       if (token == null) throw Exception('not signed in');
       final url = await SessionsApi.instance.playUrl(sessionId, token);
       if (!mounted) return;
-      _startAudioPlayer(url);
+      _startAudioPlayer(url, cacheKey: sessionId);
     } catch (e) {
       debugPrint('PlayerScreen: failed to get signed audio url: $e');
       if (mounted) _startBreathingFallback();
     }
   }
 
-  void _startAudioPlayer(String url) {
+  /// Where a session's audio is cached on disk, independent of the signed
+  /// URL used to fetch it — the URL's md5/expires query changes on every
+  /// play, so keying the cache off it (just_audio's default) would force a
+  /// full re-download every single replay. Keying off the stable
+  /// [cacheKey] instead means only the very first play ever touches the
+  /// network; every later replay reads straight from disk.
+  Future<File> _cacheFileFor(String cacheKey) async {
+    final dir = Directory('${(await getTemporaryDirectory()).path}/an_audio_cache');
+    if (!await dir.exists()) await dir.create(recursive: true);
+    return File('${dir.path}/$cacheKey.cache');
+  }
+
+  void _startAudioPlayer(String url, {String? cacheKey}) {
     final player = AudioPlayer();
     _player = player;
     _positionSub = player.positionStream.listen((p) => setState(() => _elapsed = p));
@@ -128,18 +142,23 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
           _playing = p;
           if (p) _hasStarted = true;
         }));
-    player
-        .setAudioSource(LockCachingAudioSource(
-          Uri.parse(url),
-          tag: MediaItem(
-            id: url,
-            title: widget.title,
-            artist: widget.guide ?? 'An',
-            artUri: widget.imageUrl != null ? Uri.parse(widget.imageUrl!) : null,
-          ),
-        ))
-        .then((_) => player.play())
-        .catchError((Object e) => debugPrint('PlayerScreen: failed to load audio: $e'));
+    final mediaId = cacheKey ?? url;
+    (cacheKey != null ? _cacheFileFor(cacheKey) : Future<File?>.value(null)).then((cacheFile) {
+      if (!mounted) return;
+      player
+          .setAudioSource(LockCachingAudioSource(
+            Uri.parse(url),
+            cacheFile: cacheFile,
+            tag: MediaItem(
+              id: mediaId,
+              title: widget.title,
+              artist: widget.guide ?? 'An',
+              artUri: widget.imageUrl != null ? Uri.parse(widget.imageUrl!) : null,
+            ),
+          ))
+          .then((_) => player.play())
+          .catchError((Object e) => debugPrint('PlayerScreen: failed to load audio: $e'));
+    });
   }
 
   void _startBreathingFallback() {
