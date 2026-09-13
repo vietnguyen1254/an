@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/journal_entry.dart';
 import '../../models/meditation_session.dart';
 import '../../models/mood.dart';
 import '../../services/meditation_recommend.dart';
@@ -53,6 +54,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   MeditationSession? _recommended;
   late final _Prompt _prompt;
+  bool _recommendationRequested = false;
 
   @override
   void initState() {
@@ -63,21 +65,28 @@ class _HomeScreenState extends State<HomeScreen> {
     // changes at local midnight.
     final dayIndex = DateTime.now().difference(DateTime(2020, 1, 1)).inDays;
     _prompt = prompts[dayIndex % prompts.length];
-    final entries = context.read<AppState>().entries;
-    if (entries.isNotEmpty) {
-      SessionsApi.instance.fetchAll().then((sessions) {
-        if (!mounted) return;
-        setState(() => _recommended = pickRecommendation(sessions, entries.first.mood));
-      }).catchError((Object e) {
-        // No catalog / network hiccup — just don't show the card.
-        debugPrint('HomeScreen: failed to load recommendation: $e');
-      });
-    }
+  }
+
+  // Entries can still be loading from the server (fresh login/reinstall)
+  // when this screen first mounts; this screen stays alive in MainTabs'
+  // IndexedStack, so build() re-checks on every entries update instead of
+  // giving up after a single empty initState read.
+  void _maybeFetchRecommendation(List<JournalEntry> entries) {
+    if (_recommendationRequested || entries.isEmpty) return;
+    _recommendationRequested = true;
+    SessionsApi.instance.fetchAll().then((sessions) {
+      if (!mounted) return;
+      setState(() => _recommended = pickRecommendation(sessions, entries.first.mood));
+    }).catchError((Object e) {
+      // No catalog / network hiccup — just don't show the card.
+      debugPrint('HomeScreen: failed to load recommendation: $e');
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    _maybeFetchRecommendation(state.entries);
     final isFirstDay = state.entries.isEmpty;
     final isPremium = state.plan != PlanTier.free;
 

@@ -658,6 +658,7 @@ class AppState extends ChangeNotifier {
     moodReminderEnabled = enabled;
     notifyListeners();
     (await SharedPreferences.getInstance()).setBool(_kMoodReminder, enabled);
+    if (enabled) await NotificationService.instance.requestPermission();
     rescheduleReminders();
   }
 
@@ -665,6 +666,7 @@ class AppState extends ChangeNotifier {
     meditationReminderEnabled = enabled;
     notifyListeners();
     (await SharedPreferences.getInstance()).setBool(_kMedReminder, enabled);
+    if (enabled) await NotificationService.instance.requestPermission();
     rescheduleReminders();
   }
 
