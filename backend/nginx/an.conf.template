@@ -1,6 +1,6 @@
-# Rendered by the nginx image's envsubst on start ($DOMAIN comes from compose).
-# nginx runtime vars ($host, $remote_addr, ...) are NOT env vars, so they pass
-# through untouched.
+# Rendered by the nginx image's envsubst on start ($DOMAIN, $MEDIA_LINK_SECRET
+# come from compose). nginx runtime vars ($host, $remote_addr, ...) are NOT
+# env vars, so they pass through untouched.
 
 limit_req_zone $binary_remote_addr zone=api:10m rate=20r/s;
 
@@ -46,11 +46,28 @@ server {
         root /var/www/certbot;
     }
 
-    # meditation/breathing audio + cover art — content is added by hand on
-    # the server (see backend/README.md), served directly, no app involved.
-    location /media/ {
-        alias /var/www/media/;
+    # cover art — public, no signing needed (no monetary value in a thumbnail).
+    location /media/images/ {
+        alias /var/www/media/images/;
         add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+
+    # meditation/breathing audio — the actual paid content. Signed,
+    # short-lived links only (minted by GET /v1/sessions/:id/play, which also
+    # checks the plan for non-free sessions); a bare /media/audio/<file>
+    # request 403s. Not bound to $remote_addr — mobile clients can change IP
+    # mid-session — so the real defence is the 10-minute expiry, not the
+    # signature alone. Content is still added by hand on the server (see
+    # backend/README.md); this only gates how it's served.
+    location /media/audio/ {
+        secure_link $arg_md5,$arg_expires;
+        secure_link_md5 "$secure_link_expires$uri ${MEDIA_LINK_SECRET}";
+
+        if ($secure_link = "") { return 403; }
+        if ($secure_link = "0") { return 410; }
+
+        alias /var/www/media/audio/;
+        add_header Cache-Control "private, max-age=600" always;
     }
 
     location / {

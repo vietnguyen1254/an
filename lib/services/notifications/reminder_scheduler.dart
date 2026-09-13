@@ -18,6 +18,8 @@ class ScheduleResult {
 ///    check-ins cluster far from that, it follows them instead.
 ///  • Meditation: 21:15 by default; if the last 7 days of sessions clearly
 ///    favour another part of the day, it shifts there (≤ once/week).
+const _negativeMoods = {Mood.loLang, Mood.buon, Mood.cangThang, Mood.tucGian};
+
 class ReminderScheduler {
   static const _moodBaseEarly = 17 * 60 + 45; // 17:45
   static const _moodBaseLate = 20 * 60 + 15; // 20:15
@@ -127,6 +129,7 @@ class ReminderScheduler {
     final meditatedYesterday = medWeek.any((m) => today.difference(DateTime(m.year, m.month, m.day)).inDays == 1);
     final medStreak = _streak(meditationTimes, today);
     final recentDominantMood = _dominant(recentMoods.take(5).toList());
+    final positiveMoodStreak = _positiveMoodStreak(entryTimes, recentMoods, today);
 
     // ---- assemble ----
     final out = <PlannedReminder>[];
@@ -143,6 +146,7 @@ class ReminderScheduler {
             title: 'Mây',
             body: moodReminderLine(
               streakDays: streakDays,
+              positiveMoodStreakDays: positiveMoodStreak,
               lastMood: lastMood,
               phaseNew: daysSinceStart + k < _phaseDays,
               daysSinceLastEntry: daysSinceLastEntry,
@@ -195,6 +199,35 @@ class ReminderScheduler {
       c[m] = (c[m] ?? 0) + 1;
     }
     return c.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+  }
+
+  /// Consecutive days (ending today or yesterday, 0 if today already broke
+  /// it) where every check-in that day was a non-negative mood — the "your
+  /// mood has been good for N days" signal, distinct from [_streak]'s
+  /// "you showed up for N days" one. [times] and [moods] must be index-
+  /// aligned (same entry).
+  static int _positiveMoodStreak(List<DateTime> times, List<Mood> moods, DateTime today) {
+    final byDay = <DateTime, bool>{};
+    for (var i = 0; i < times.length; i++) {
+      final day = DateTime(times[i].year, times[i].month, times[i].day);
+      final positive = !_negativeMoods.contains(moods[i]);
+      byDay[day] = (byDay[day] ?? true) && positive;
+    }
+    final days = byDay.keys.toList()..sort((a, b) => b.compareTo(a));
+    if (days.isEmpty) return 0;
+    final yesterday = today.subtract(const Duration(days: 1));
+    if (days.first != today && days.first != yesterday) return 0;
+    var streak = 0;
+    var cursor = days.first;
+    for (final d in days) {
+      if (d == cursor && byDay[d]!) {
+        streak++;
+        cursor = cursor.subtract(const Duration(days: 1));
+      } else {
+        break;
+      }
+    }
+    return streak;
   }
 
   /// Consecutive days (ending today or yesterday) with at least one timestamp.

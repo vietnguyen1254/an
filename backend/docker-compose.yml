@@ -76,6 +76,7 @@ services:
       - ./media:/var/www/media:ro
     environment:
       DOMAIN: ${DOMAIN}
+      MEDIA_LINK_SECRET: ${MEDIA_LINK_SECRET}
     networks: [edge]
     depends_on: [api]
     mem_limit: 96m

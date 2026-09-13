@@ -4,6 +4,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:provider/provider.dart';
 import '../../models/mood.dart';
+import '../../services/sessions_api.dart';
 import '../../state/app_state.dart';
 import '../../theme/colors.dart';
 import '../../widgets/may.dart';
@@ -93,39 +94,64 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
     // Persist listened time as we go, not just once when the screen closes.
     _trackTimer = Timer.periodic(const Duration(seconds: 10), (_) => _flushMeditationLog());
 
-    final url = widget.audioUrl;
-    if (url != null) {
-      final player = AudioPlayer();
-      _player = player;
-      _positionSub = player.positionStream.listen((p) => setState(() => _elapsed = p));
-      _durationSub = player.durationStream.listen((d) => setState(() => _duration = d));
-      _playingSub = player.playingStream.listen((p) => setState(() {
-            _playing = p;
-            if (p) _hasStarted = true;
-          }));
-      player
-          .setAudioSource(LockCachingAudioSource(
-            Uri.parse(url),
-            tag: MediaItem(
-              id: url,
-              title: widget.title,
-              artist: widget.guide ?? 'An',
-              artUri: widget.imageUrl != null ? Uri.parse(widget.imageUrl!) : null,
-            ),
-          ))
-          .then((_) => player.play())
-          .catchError((Object e) => debugPrint('PlayerScreen: failed to load audio: $e'));
+    if (widget.sessionId != null) {
+      // Real catalog content — the URL from the catalog/recommendation call
+      // is a bare, unsigned path that 403s at nginx; mint a short-lived
+      // signed one just before playing (see SessionsApi.playUrl).
+      _loadSignedAudio(widget.sessionId!);
+    } else if (widget.audioUrl != null) {
+      _startAudioPlayer(widget.audioUrl!);
     } else {
-      // No recording yet — keep the old silent countdown so the breathing
-      // animation still works standalone. Starts immediately, no loading
-      // gap, so it's genuinely "started" from the first frame.
-      _hasStarted = true;
-      _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (_playing && _elapsed.inSeconds < _totalSeconds) {
-          setState(() => _elapsed += const Duration(seconds: 1));
-        }
-      });
+      _startBreathingFallback();
     }
+  }
+
+  Future<void> _loadSignedAudio(String sessionId) async {
+    try {
+      final token = _appState.authToken;
+      if (token == null) throw Exception('not signed in');
+      final url = await SessionsApi.instance.playUrl(sessionId, token);
+      if (!mounted) return;
+      _startAudioPlayer(url);
+    } catch (e) {
+      debugPrint('PlayerScreen: failed to get signed audio url: $e');
+      if (mounted) _startBreathingFallback();
+    }
+  }
+
+  void _startAudioPlayer(String url) {
+    final player = AudioPlayer();
+    _player = player;
+    _positionSub = player.positionStream.listen((p) => setState(() => _elapsed = p));
+    _durationSub = player.durationStream.listen((d) => setState(() => _duration = d));
+    _playingSub = player.playingStream.listen((p) => setState(() {
+          _playing = p;
+          if (p) _hasStarted = true;
+        }));
+    player
+        .setAudioSource(LockCachingAudioSource(
+          Uri.parse(url),
+          tag: MediaItem(
+            id: url,
+            title: widget.title,
+            artist: widget.guide ?? 'An',
+            artUri: widget.imageUrl != null ? Uri.parse(widget.imageUrl!) : null,
+          ),
+        ))
+        .then((_) => player.play())
+        .catchError((Object e) => debugPrint('PlayerScreen: failed to load audio: $e'));
+  }
+
+  void _startBreathingFallback() {
+    // No playable recording — keep the old silent countdown so the
+    // breathing animation still works standalone. Starts immediately, no
+    // loading gap, so it's genuinely "started" from the first frame.
+    _hasStarted = true;
+    _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_playing && _elapsed.inSeconds < _totalSeconds) {
+        setState(() => _elapsed += const Duration(seconds: 1));
+      }
+    });
   }
 
   @override

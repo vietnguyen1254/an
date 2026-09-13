@@ -27,6 +27,10 @@ if (!process.env.JWT_SECRET) {
   app.log.error('JWT_SECRET is required');
   process.exit(1);
 }
+if (!process.env.MEDIA_LINK_SECRET) {
+  app.log.error('MEDIA_LINK_SECRET is required');
+  process.exit(1);
+}
 
 await app.register(cors, { origin: true });
 await app.register(jwt, { secret: process.env.JWT_SECRET });

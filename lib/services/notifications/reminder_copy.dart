@@ -26,6 +26,7 @@ String _pick(List<String> pool, List<String> recent) {
 /// lock screen. `{streak}` is filled by the caller.
 String moodReminderLine({
   required int streakDays,
+  required int positiveMoodStreakDays,
   required Mood? lastMood,
   required bool phaseNew,
   required int daysSinceLastEntry,
@@ -40,6 +41,8 @@ String moodReminderLine({
     pool = _moodAfterHeavy;
   } else if (lastMood != null && !_negativeMoods.contains(lastMood) && daysSinceLastEntry <= 1) {
     pool = _moodAfterLight;
+  } else if (positiveMoodStreakDays >= 3) {
+    pool = _moodPositiveStreak;
   } else if (streakDays >= 7) {
     pool = _moodStreakStrong;
   } else if (reminderHour >= 19) {
@@ -47,7 +50,9 @@ String moodReminderLine({
   } else {
     pool = _moodGeneric;
   }
-  return _pick(pool, _recentMood).replaceAll('{streak}', '$streakDays');
+  return _pick(pool, _recentMood)
+      .replaceAll('{streak}', '$streakDays')
+      .replaceAll('{positiveStreak}', '$positiveMoodStreakDays');
 }
 
 const _moodComeback = [
@@ -92,6 +97,15 @@ const _moodAfterLight = [
   'Ghi lại hôm nay để giữ mạch nha.',
   'Hôm nay bạn thế nào? Mây tò mò lắm.',
   'Dành chút thời gian cho cảm xúc hôm nay nhé.',
+];
+
+const _moodPositiveStreak = [
+  '{positiveStreak} ngày qua cảm xúc bạn khá nhẹ nhàng đấy. Kể tiếp hôm nay nhé.',
+  'Tâm trạng bạn đã tích cực suốt {positiveStreak} ngày rồi. Giữ mạch này nhé!',
+  'Mây để ý {positiveStreak} ngày nay bạn ổn hơn hẳn. Hôm nay thế nào?',
+  '{positiveStreak} ngày liền không có ngày nào nặng nề. Đáng mừng lắm đó.',
+  'Bạn đang có một chuỗi ngày dễ chịu — {positiveStreak} ngày rồi. Tiếp tục nhé.',
+  'Nhìn lại {positiveStreak} ngày qua, cảm xúc bạn khá ổn định. Hôm nay ra sao?',
 ];
 
 const _moodStreakStrong = [
@@ -145,12 +159,12 @@ String meditationReminderLine({
     pool = _medStressed;
   } else if (recentDominantMood == Mood.tucGian) {
     pool = _medAngry;
+  } else if (medStreakDays >= 3) {
+    pool = _medStreak;
   } else if (slot == MedSlot.morning) {
     pool = _medMorning;
   } else if (slot == MedSlot.midday) {
     pool = _medMidday;
-  } else if (medStreakDays >= 3) {
-    pool = _medEveningStreak;
   } else {
     pool = _medEvening;
   }
@@ -217,14 +231,14 @@ const _medStressed = [
   'Ngày dồn dập quá. Khép lại bằng một bài thư giãn nhé.',
 ];
 
-const _medEveningStreak = [
-  '{streak} ngày thiền rồi. Tối nay tiếp nhé?',
-  'Giữ nhịp nào — một bài ngắn trước khi ngủ.',
-  'Mây quen có bạn mỗi tối rồi. Nghe một bài nhé?',
-  'Đừng để tối nay lỡ nhịp. Mây đợi bạn.',
-  'Chuỗi thiền của bạn đang đẹp. Thêm tối nay nữa.',
-  'Vài phút quen thuộc trước khi ngủ nhé?',
-  'Bạn bền bỉ thật. Một bài nữa cho tối nay.',
+const _medStreak = [
+  '{streak} ngày thiền rồi. Hôm nay tiếp nhé?',
+  'Giữ nhịp nào — một bài ngắn hôm nay nữa.',
+  'Mây quen có bạn mỗi ngày rồi. Nghe một bài nhé?',
+  'Đừng để hôm nay lỡ nhịp {streak} ngày. Mây đợi bạn.',
+  'Chuỗi thiền của bạn đang đẹp — {streak} ngày rồi. Thêm hôm nay nữa.',
+  'Vài phút quen thuộc, giữ chuỗi {streak} ngày nhé?',
+  'Bạn bền bỉ thật, {streak} ngày liền. Một bài nữa cho hôm nay.',
 ];
 
 const _medEvening = [

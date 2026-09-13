@@ -1,4 +1,21 @@
+import crypto from 'node:crypto';
 import { query } from '../db.js';
+
+const PLAY_LINK_TTL_SECONDS = 600;
+
+// Matches nginx's secure_link_md5 "$secure_link_expires$uri ${MEDIA_LINK_SECRET}"
+// in nginx/an.conf.template — base64url, no padding, per the module's spec.
+function signAudioPath(uriPath) {
+  const expires = Math.floor(Date.now() / 1000) + PLAY_LINK_TTL_SECONDS;
+  const md5 = crypto
+    .createHash('md5')
+    .update(`${expires}${uriPath} ${process.env.MEDIA_LINK_SECRET}`)
+    .digest('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+  return `${uriPath}?md5=${md5}&expires=${expires}`;
+}
 
 const COLS =
   'id, slug, title, guide, categories, kind, duration_seconds, audio_path, image_path, is_free, series_name, series_index, series_total';
@@ -72,5 +89,26 @@ export default async function sessionRoutes(app) {
     const pool = best > 0 ? rows.filter((r) => scoreOf(r) === best) : rows;
     const pick = pool[Math.floor(Math.random() * pool.length)];
     return { session: toPublic(pick) };
+  });
+
+  // A short-lived, signed audio_url for actual playback — the bare path
+  // from /v1/sessions above 403s at nginx without one (see
+  // nginx/an.conf.template). Requires auth, and a non-free session also
+  // requires an active plan, matching the trust level the rest of the app's
+  // premium gating already runs on (see project_subscriptions_faked).
+  app.get('/v1/sessions/:id/play', { onRequest: [app.authenticate] }, async (req, reply) => {
+    const { rows } = await query(
+      'select audio_path, is_free from meditation_sessions where id = $1',
+      [req.params.id],
+    );
+    const session = rows[0];
+    if (!session) return reply.code(404).send({ error: 'not_found' });
+    if (!session.is_free) {
+      const { rows: userRows } = await query('select plan_tier from users where id = $1', [req.user.sub]);
+      if ((userRows[0]?.plan_tier ?? 'free') === 'free') {
+        return reply.code(402).send({ error: 'premium_required' });
+      }
+    }
+    return { audio_url: signAudioPath(`/media/audio/${session.audio_path}`) };
   });
 }

@@ -47,6 +47,21 @@ class SessionsApi {
     return session == null ? null : MeditationSession.fromJson(session);
   }
 
+  /// Mints a short-lived, signed URL to actually stream [sessionId]'s audio —
+  /// the bare audio_url from [fetchAll]/[recommend] 403s at nginx without
+  /// one (see backend/nginx/an.conf.template). Throws on 402 if the session
+  /// isn't free and [token]'s account has no active plan, and on any other
+  /// non-200.
+  Future<String> playUrl(String sessionId, String token) async {
+    final uri = Uri.parse('${AppConfig.apiBaseUrl}/v1/sessions/$sessionId/play');
+    final res = await http.get(uri, headers: {'Authorization': 'Bearer $token'}).timeout(const Duration(seconds: 10));
+    if (res.statusCode != 200) {
+      throw Exception('failed to get play url (${res.statusCode})');
+    }
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    return resolve(body['audio_url'] as String);
+  }
+
   /// Absolute URL for a media path returned by the API (e.g. audio_url,
   /// image_url), which is server-relative ("/media/...").
   String resolve(String path) => '${AppConfig.apiBaseUrl}$path';
