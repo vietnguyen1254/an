@@ -51,9 +51,9 @@ class _SavedScreenState extends State<SavedScreen> {
       trend: trend,
       intensity: state.draftIntensity,
     );
-    SessionsApi.instance.fetchAll().then((sessions) {
+    SessionsApi.instance.recommend(state.draftMood, tags: state.draftTags, intensity: state.draftIntensity).then((session) {
       if (!mounted) return;
-      setState(() => _recommended = pickRecommendation(sessions, state.draftMood));
+      setState(() => _recommended = session);
     }).catchError((Object e) {
       debugPrint('SavedScreen: failed to load recommendation: $e');
     });

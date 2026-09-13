@@ -21,6 +21,9 @@ function toPublic(row) {
   };
 }
 
+const MOODS = ['tucGian', 'vui', 'binhThuong', 'loLang', 'buon', 'cangThang'];
+const TOPIC_TAGS = ['cong-viec', 'gia-dinh', 'suc-khoe', 'giac-ngu', 'tai-chinh', 'moi-quan-he', 'ban-than'];
+
 // Public catalog — no auth. Content is managed by hand on the server, not
 // through the app, so this is read-only.
 export default async function sessionRoutes(app) {
@@ -42,5 +45,32 @@ export default async function sessionRoutes(app) {
       params,
     );
     return { sessions: rows.map(toPublic) };
+  });
+
+  // One session recommended for the check-in just recorded, scored on the
+  // hidden `mood_weights`/`topic_tags`/`intensity_min`/`intensity_max`
+  // (never included in the public catalog above) — mood match dominates,
+  // topic overlap and intensity fit only break ties between equally-good
+  // moods, so a small catalog never gets over-filtered to empty. Ties —
+  // including "nothing scores above 0" — fall back to a uniform random pick.
+  app.get('/v1/sessions/recommend', async (req) => {
+    const { mood, tags, intensity } = req.query ?? {};
+    const wantTags = (typeof tags === 'string' ? tags.split(',') : []).filter((t) => TOPIC_TAGS.includes(t));
+    const wantIntensity = Number.isInteger(Number(intensity)) ? Number(intensity) : null;
+    const { rows } = await query(
+      `select ${COLS}, mood_weights, topic_tags, intensity_min, intensity_max from meditation_sessions`,
+      [],
+    );
+    if (rows.length === 0) return { session: null };
+    const scoreOf = (r) => {
+      const moodScore = MOODS.includes(mood) && typeof r.mood_weights?.[mood] === 'number' ? r.mood_weights[mood] : 0;
+      const topicOverlap = wantTags.filter((t) => r.topic_tags?.includes(t)).length;
+      const intensityFit = wantIntensity != null && wantIntensity >= r.intensity_min && wantIntensity <= r.intensity_max ? 1 : 0;
+      return moodScore * 10 + topicOverlap * 2 + intensityFit;
+    };
+    const best = Math.max(...rows.map(scoreOf));
+    const pool = best > 0 ? rows.filter((r) => scoreOf(r) === best) : rows;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    return { session: toPublic(pick) };
   });
 }

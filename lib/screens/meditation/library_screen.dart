@@ -60,10 +60,10 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     setState(() {
       _future = SessionsApi.instance.fetchAll();
     });
-    _future.then((sessions) {
+    final state = context.read<AppState>();
+    SessionsApi.instance.recommend(state.draftMood, tags: state.draftTags, intensity: state.draftIntensity).then((session) {
       if (!mounted) return;
-      final mood = context.read<AppState>().draftMood;
-      setState(() => _recommended = pickRecommendation(sessions, mood));
+      setState(() => _recommended = session);
     }).catchError((Object e) {
       debugPrint('LibraryScreen: failed to load recommendation: $e');
     });

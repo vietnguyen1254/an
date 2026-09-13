@@ -74,9 +74,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _maybeFetchRecommendation(List<JournalEntry> entries) {
     if (_recommendationRequested || entries.isEmpty) return;
     _recommendationRequested = true;
-    SessionsApi.instance.fetchAll().then((sessions) {
+    SessionsApi.instance.recommend(entries.first.mood, tags: entries.first.tags, intensity: entries.first.intensity).then((session) {
       if (!mounted) return;
-      setState(() => _recommended = pickRecommendation(sessions, entries.first.mood));
+      setState(() => _recommended = session);
     }).catchError((Object e) {
       // No catalog / network hiccup — just don't show the card.
       debugPrint('HomeScreen: failed to load recommendation: $e');
